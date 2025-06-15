@@ -164,8 +164,26 @@ body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
 
 /* Hide Streamlit Elements */
 #MainMenu, footer, header, .stDeployButton {visibility: hidden;}
+
+
+/* === FORCE LIGHT THEME OVERRIDE === */
+body, .stApp {
+    background: #FFFFFF !important;
+    color: #212529 !important;
+}
+
+.caption-box, .progress-box, .info-card, .success-message {
+    background: #F8F9FA !important;
+    color: #212529 !important;
+    border-color: #DEE2E6 !important;
+}
+
+p, li, span, div, h1, h2, h3, h4, h5, h6 {
+    color: #212529 !important;
+}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 class ALCIEStreamlitApp:
