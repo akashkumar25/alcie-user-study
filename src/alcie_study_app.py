@@ -201,10 +201,23 @@ def should_show_category_assessment():
     if st.session_state.current_sample_idx == 0:
         return False, None, None
     
+    # NEW: Check if we've just finished the study (last category assessment)
     if st.session_state.current_sample_idx >= len(app.study_data):
-        return False, None, None
+        # Get the last sample's category for final assessment
+        last_sample = app.study_data[st.session_state.current_sample_idx - 1]
+        last_category = last_sample['category']
+        
+        # Check if we haven't assessed the last category yet
+        final_assessment_key = f"final_{last_category.lower()}_assessment"
+        if not hasattr(st.session_state, 'assessed_transitions'):
+            st.session_state.assessed_transitions = set()
+        
+        if final_assessment_key not in st.session_state.assessed_transitions:
+            return True, last_category, "completion"
+        else:
+            return False, None, None
     
-    # Check if we're transitioning to a new category
+    # Check if we're transitioning to a new category (existing logic)
     current_sample = app.study_data[st.session_state.current_sample_idx]
     previous_sample = app.study_data[st.session_state.current_sample_idx - 1]
     
@@ -227,14 +240,32 @@ def show_category_transition_assessment(previous_category, current_category):
     """Show assessment when transitioning between categories"""
     
     st.markdown("---")
-    st.markdown(f"""
-    <div class="info-card" style="background: #FEF3C7; border-color: #F59E0B;">
-        <h3>📊 Quick Category Assessment</h3>
-        <p><strong>You've just completed:</strong> {previous_category} items</p>
-        <p><strong>Now starting:</strong> {current_category} items</p>
-        <p>This helps us understand quality patterns across fashion categories.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    
+    # NEW: Handle final category assessment differently
+    if current_category == "completion":
+        st.markdown(f"""
+        <div class="info-card" style="background: #FEF3C7; border-color: #F59E0B;">
+            <h3>📊 Final Category Assessment</h3>
+            <p><strong>You've just completed:</strong> {previous_category} items (Final Category)</p>
+            <p><strong>Next:</strong> Final questionnaire</p>
+            <p>This helps us understand quality patterns for the last fashion category.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        continue_text = "Continue to Final Questionnaire →"
+        transition_key = f"final_{previous_category.lower()}_assessment"
+    else:
+        st.markdown(f"""
+        <div class="info-card" style="background: #FEF3C7; border-color: #F59E0B;">
+            <h3>📊 Quick Category Assessment</h3>
+            <p><strong>You've just completed:</strong> {previous_category} items</p>
+            <p><strong>Now starting:</strong> {current_category} items</p>
+            <p>This helps us understand quality patterns across fashion categories.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        continue_text = f"Continue to {current_category} →"
+        transition_key = f"{previous_category}_to_{current_category}"
     
     col1, col2 = st.columns(2)
     
@@ -279,7 +310,7 @@ def show_category_transition_assessment(previous_category, current_category):
         key=f"comments_{previous_category.lower()}"
     )
     
-    if st.button(f"Continue to {current_category} →", type="primary", use_container_width=True):
+    if st.button(continue_text, type="primary", use_container_width=True):
         # Validate that all radio buttons are selected
         if not quality_assessment:
             st.error("❌ Please rate the overall caption quality")
@@ -311,12 +342,18 @@ def show_category_transition_assessment(previous_category, current_category):
             st.session_state.category_assessments.append(assessment_data)
             
             # Mark this transition as assessed
-            transition_key = f"{previous_category}_to_{current_category}"
             st.session_state.assessed_transitions.add(transition_key)
             
-            # Set flag to show transition message
-            st.session_state.show_transition_banner = f"category_transition_{current_category}"
-            st.session_state.show_category_assessment = False
+            # NEW: Handle final category vs regular transition
+            if current_category == "completion":
+                # Go directly to completion page
+                st.session_state.show_category_assessment = False
+                st.session_state.show_transition_banner = "final_category_completed"
+            else:
+                # Regular category transition
+                st.session_state.show_transition_banner = f"category_transition_{current_category}"
+                st.session_state.show_category_assessment = False
+            
             st.rerun()
 
 def show_welcome_page():
@@ -519,8 +556,16 @@ def show_study_interface():
 
     current = get_current_sample()
     if not current:
-        show_completion_page()
-        return
+        # NEW: Check if we need final category assessment before completion
+        should_assess, prev_cat, curr_cat = should_show_category_assessment()
+        if should_assess:
+            st.session_state.show_category_assessment = True
+            st.session_state.assessment_previous_category = prev_cat
+            st.session_state.assessment_current_category = curr_cat
+            st.rerun()
+        else:
+            show_completion_page()
+            return
 
     # Reset sliders only if flagged and BEFORE widgets are rendered
     if st.session_state.get("slider_reset_needed", False):
@@ -976,6 +1021,8 @@ def show_transition_message(message="Loading next image..."):
     if isinstance(banner_value, str) and banner_value.startswith("category_transition_"):
         category = banner_value.split("_")[-1]
         message = f"Starting {category} category..."
+    elif banner_value == "final_category_completed":
+        message = "All categories completed! Proceeding to final questionnaire..."
     
     st.markdown(f"""
     <div class="success-message">
@@ -1010,9 +1057,6 @@ def show_transition_message(message="Loading next image..."):
 def main():
     """Main application"""
     st.markdown('<a id="scroll-top"></a>', unsafe_allow_html=True)
-
-    print("Banner flag:", st.session_state.get("show_transition_banner"))
-
 
     if not st.session_state.study_started:
         show_welcome_page()
