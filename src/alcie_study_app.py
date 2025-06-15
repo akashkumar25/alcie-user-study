@@ -1082,7 +1082,7 @@ def main():
     }
     </style>
     """, unsafe_allow_html=True)
-    """Main application"""
+    
     st.markdown('<a id="scroll-top"></a>', unsafe_allow_html=True)
 
     if not st.session_state.study_started:
