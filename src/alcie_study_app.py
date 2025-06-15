@@ -28,204 +28,119 @@ import os
 # Custom CSS for modern design
 st.markdown("""
 <style>
-    /* Modern, clean design */
-    :root {
-        --primary-color: #4F46E5;
-        --primary-dark: #3730A3;
-        --success-color: #10B981;
-        --text-primary: #1F2937;
-        --text-secondary: #6B7280;
-        --bg-primary: #FFFFFF;
-        --bg-secondary: #F9FAFB;
-        --border-color: #E5E7EB;
-        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        --radius: 8px;
-    }
-    /* All text elements - ensure visibility */
-    p, li, span, div, h1, h2, h3, h4, h5, h6, label {
-        color: #262730 !important;
-    }
+/* Root Variables */
+:root {
+    --primary-color: #4F46E5;
+    --primary-dark: #3730A3;
+    --success-color: #10B981;
+    --radius: 8px;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
 
-    /* Info card text fixes */
-    .info-card h3 {
-        color: #262730 !important;
-        margin-bottom: 1rem;
-    }
+/* Default (Light Theme) */
+html:not([data-theme="dark"]) {
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F9FAFB;
+    --border-color: #E5E7EB;
+}
 
-    .info-card p, .info-card li {
-        color: #262730 !important;
-    }
+/* Dark Theme Overrides */
+html[data-theme="dark"] {
+    --text-primary: #ECEFF4;
+    --text-secondary: #D8DEE9;
+    --bg-primary: #2E3440;
+    --bg-secondary: #3B4252;
+    --border-color: #4C566A;
+}
 
-    /* Radio button styling */
-    .stRadio > div {
-        color: #262730 !important;
-    }
+/* Global Text Styling */
+body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary) !important;
+}
 
-    .stRadio label {
-        color: #262730 !important;
-    }
+/* Header */
+.main-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    text-align: center;
+    padding: 2rem;
+    margin: -1rem -1rem 2rem -1rem;
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: var(--shadow);
+}
 
-    /* Success message text */
-    .success-message h4 {
-        color: #065F46 !important;
-    }
-    /* Selectbox/Dropdown styling - white text on dark background */
-    .stSelectbox > div > div {
-        background: #2E3440 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #4C566A !important;
-    }
+.main-header h1, .main-header h3 {
+    color: white !important;
+}
 
-    .stSelectbox [data-baseweb="select"] {
-        background: #2E3440 !important;
-        color: #FFFFFF !important;
-    }
+/* Cards */
+.info-card, .caption-box, .progress-box, .success-message {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+}
 
-    .stSelectbox [data-baseweb="select"] > div {
-        background: #2E3440 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #4C566A !important;
-    }
+/* Category Badge */
+.category-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
 
-    .stSelectbox [role="listbox"] {
-        background: #2E3440 !important;
-        border: 1px solid #4C566A !important;
-    }
+/* Buttons */
+.stButton > button {
+    background: var(--primary-color) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: var(--radius) !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1.5rem !important;
+    transition: all 0.2s !important;
+}
 
-    .stSelectbox [role="option"] {
-        background: #2E3440 !important;
-        color: #FFFFFF !important;
-    }
+.stButton > button:hover {
+    background: var(--primary-dark) !important;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
 
-    .stSelectbox [role="option"]:hover {
-        background: #3B4252 !important;
-        color: #FFFFFF !important;
-    }
+/* Dropdown / Selectbox / Multiselect */
+.stSelectbox, .stMultiSelect {
+    color: var(--text-primary) !important;
+}
 
-    /* Multiselect styling - white text */
-    .stMultiSelect > div > div {
-        background: #2E3440 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #4C566A !important;
-    }
+.stSelectbox > div > div, 
+.stSelectbox [data-testid="stSelectbox"],
+.stMultiSelect > div > div,
+.stMultiSelect [data-testid="stMultiSelect"] {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
 
-    .stMultiSelect [data-baseweb="select"] {
-        background: #2E3440 !important;
-        color: #FFFFFF !important;
-    }
+[data-baseweb="popover"],
+[data-baseweb="popover"] ul,
+[data-baseweb="popover"] li,
+[data-baseweb="popover"] li:hover,
+[data-baseweb="select"],
+[data-baseweb="tag"] {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
 
-    .stMultiSelect [role="listbox"] {
-        background: #2E3440 !important;
-    }
-
-    .stMultiSelect [role="option"] {
-        background: #2E3440 !important;
-        color: #FFFFFF !important;
-    }
-
-    .stMultiSelect [role="option"]:hover {
-        background: #3B4252 !important;
-        color: #FFFFFF !important;
-    }
-    
-    .main-header {
-        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-        color: white;
-        text-align: center;
-        padding: 2rem;
-        margin: -1rem -1rem 2rem -1rem;
-        border-radius: 0 0 var(--radius) var(--radius);
-        box-shadow: var(--shadow);
-    }
-    
-    .main-header h1 {
-        color: white !important;
-        margin: 0;
-        font-size: 2rem;
-        font-weight: 600;
-    }
-    
-    .main-header h3 {
-        color: rgba(255,255,255,0.9) !important;
-        margin: 0.5rem 0 0 0;
-        font-weight: 400;
-    }
-    
-    .info-card {
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: var(--shadow);
-    }
-    
-    .caption-box {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 1rem;
-        margin: 0.5rem 0;
-        font-size: 0.9rem;
-        line-height: 1.5;
-    }
-    
-    .progress-box {
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 1rem;
-        text-align: center;
-        margin: 1rem 0;
-        font-weight: 500;
-    }
-    
-    .category-badge {
-        background: var(--primary-color);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        display: inline-block;
-        margin: 0.5rem 0;
-    }
-    
-    .success-message {
-        background: #D1FAE5;
-        border: 1px solid var(--success-color);
-        color: #065F46;
-        border-radius: var(--radius);
-        padding: 1rem;
-        margin: 1rem 0;
-        text-align: center;
-    }
-    
-    .stButton > button {
-        background: var(--primary-color) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: var(--radius) !important;
-        font-weight: 600 !important;
-        padding: 0.75rem 1.5rem !important;
-        transition: all 0.2s !important;
-    }
-    
-    .stButton > button:hover {
-        background: var(--primary-dark) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: var(--shadow) !important;
-    }
-    
-    /* Hide streamlit elements */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    
-    .stDeployButton {display: none;}
+/* Hide Streamlit Elements */
+#MainMenu, footer, header, .stDeployButton {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
+
 
 class ALCIEStreamlitApp:
     def __init__(self):
