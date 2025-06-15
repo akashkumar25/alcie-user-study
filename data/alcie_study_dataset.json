@@ -1,0 +1,373 @@
+{
+  "metadata": {
+    "study_type": "human_evaluation_diverse_captions",
+    "total_samples": 24,
+    "total_evaluations": 72,
+    "sampling_methods": [
+      "random",
+      "diversity",
+      "uncertainty"
+    ],
+    "categories": [
+      "accessories",
+      "bottoms",
+      "dresses",
+      "outerwear",
+      "shoes",
+      "tops"
+    ],
+    "cf_risk_mapping": {
+      "accessories": {
+        "phase": 1,
+        "risk": "highest",
+        "target_samples": 6
+      },
+      "bottoms": {
+        "phase": 2,
+        "risk": "very_high",
+        "target_samples": 5
+      },
+      "dresses": {
+        "phase": 3,
+        "risk": "high",
+        "target_samples": 4
+      },
+      "outerwear": {
+        "phase": 4,
+        "risk": "medium",
+        "target_samples": 3
+      },
+      "shoes": {
+        "phase": 5,
+        "risk": "low",
+        "target_samples": 3
+      },
+      "tops": {
+        "phase": 6,
+        "risk": "lowest",
+        "target_samples": 3
+      }
+    },
+    "selection_date": "2025-06-13T01:25:38.269090",
+    "selection_strategy": "prioritize_caption_diversity",
+    "research_questions": [
+      "Catastrophic Forgetting: Do earlier categories show lower quality?",
+      "Method Comparison: Which sampling method produces better captions?",
+      "Caption Diversity: How do different sampling methods compare?"
+    ]
+  },
+  "samples": [
+    {
+      "image_id": "70bacc88-630c-4461-9b9c-20dbf5c49e08",
+      "category": "accessories",
+      "introduced_phase": 1,
+      "cf_risk": "highest",
+      "predictions": {
+        "random": "tough tech canvas defines a modern compact bag that offer easy access to your daily essential with easy access",
+        "diversity": "tough tech canvas defines a modern compact bag that offer easy access to your daily essential phone key wallet",
+        "uncertainty": "tough tech canvas defines a modern compact bag that offer easy access to your daily essential and versatile styling"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "d25ba0cc-1631-4ccd-a35a-b383fe945777",
+      "category": "accessories",
+      "introduced_phase": 1,
+      "cf_risk": "highest",
+      "predictions": {
+        "random": "this structured round bag in an on trend mini size is crafted in italy from supple suede",
+        "diversity": "this archival inspired crossbody bag celebrates coach s legacy and authentic new york heritage with a clean",
+        "uncertainty": "crafted from lightly textured italian calfskin with a structured half moon silhouette this crossbody bag is"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "074e9bd0-cb83-455f-9c4c-4671a632f40f",
+      "category": "accessories",
+      "introduced_phase": 1,
+      "cf_risk": "highest",
+      "predictions": {
+        "random": "this compact framed bag is roomy enough for day to night essential and can be worn on the shoulder",
+        "diversity": "classic equestrian styling informs both the saddle silhouette and ring hardware of a leather bag designed to be",
+        "uncertainty": "this archival inspired crossbody bag celebrates coach s legacy and authentic new york heritage with a clean"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "f034ab1b-0e66-4357-8daf-027bd7bd66d8",
+      "category": "accessories",
+      "introduced_phase": 1,
+      "cf_risk": "highest",
+      "predictions": {
+        "random": "richly pebbled leather and signature gleaming hardware amplify the sophisticated appeal of a lightly structured h",
+        "diversity": "softly pebbled faux leather detail a sophisticated handbag in a neatly structured silhouette that can stand",
+        "uncertainty": "richly pebbled leather and signature gleaming hardware amplify the sophisticated appeal of a lightly structured h"
+      },
+      "diversity_score": 2,
+      "is_diverse": true
+    },
+    {
+      "image_id": "57acda00-e70c-4b5a-a58e-05c8ac64b0f1",
+      "category": "accessories",
+      "introduced_phase": 1,
+      "cf_risk": "highest",
+      "predictions": {
+        "random": "karl lagerfeld leaf his mark on this chic leather duffle bag in the form of gle",
+        "diversity": "karl lagerfeld leaf his mark on this chic duffle bag in the form of gleaming",
+        "uncertainty": "karl lagerfeld leaf his mark on this chic leather duffle bag in the form of gle"
+      },
+      "diversity_score": 2,
+      "is_diverse": true
+    },
+    {
+      "image_id": "981c61ac-937b-4125-ac65-34eaec73d778",
+      "category": "accessories",
+      "introduced_phase": 1,
+      "cf_risk": "highest",
+      "predictions": {
+        "random": "the brand s iconic weave crafted from hand woven strip of nappa leather texture this softly structured belt bag",
+        "diversity": "the brand s iconic intrecciato weave crafted from handwoven strip of soft nappa",
+        "uncertainty": "the brand s iconic weave crafted from hand woven strip of nappa leather texture this softly structured belt bag"
+      },
+      "diversity_score": 2,
+      "is_diverse": true
+    },
+    {
+      "image_id": "438097cf-1e36-4f10-97c7-b410393b7fa7",
+      "category": "bottoms",
+      "introduced_phase": 2,
+      "cf_risk": "very_high",
+      "predictions": {
+        "random": "cut from comfortable stretch denim popped with contrast stitching these jeans have a comfortable fit through rise seat and thigh",
+        "diversity": "cut for a clean slim fit these performance jeans feature lycra dualfx technology for flexibility comfort and",
+        "uncertainty": "the masterpiece jeans use premium denim woven from a luxurious cotton blend that s soft to the touch and flex"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "1c6a6f11-7bb8-4089-bfa9-96cdd97c8369",
+      "category": "bottoms",
+      "introduced_phase": 2,
+      "cf_risk": "very_high",
+      "predictions": {
+        "random": "a tidy print lends old school charm to slim straight leg pants fashioned from premium italian stretch cotton in",
+        "diversity": "five pocket styling and stretch cotton canvas construction bring laid back attitude to slim straight leg pants that are a",
+        "uncertainty": "slim straight leg pants a mid rise update to ag s matchbox cut strike the perfect note between"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "a0240c1a-82b1-4802-a166-8120c136d360",
+      "category": "bottoms",
+      "introduced_phase": 2,
+      "cf_risk": "very_high",
+      "predictions": {
+        "random": "sharp flat front style defines classic italian trousers fashioned from finely textured wool for a crisp finish that",
+        "diversity": "sharp flat front style defines classic italian trousers fashioned from finely textured wool for a rich finish and",
+        "uncertainty": "sharp flat front style defines classic italian trousers fashioned from finely textured wool and fitted with a self"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "f47794d2-e696-4aac-8f05-95478f21d980",
+      "category": "bottoms",
+      "introduced_phase": 2,
+      "cf_risk": "very_high",
+      "predictions": {
+        "random": "these deftly pleated wide leg pants boast a hint of shine achieved through adding the shimmer behind the",
+        "diversity": "polished disc add light reflecting edge to these sleek houndstooth pants hiding zippered leg",
+        "uncertainty": "top load of swagger into your look with these slouchy pants crafted of fine italian su"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "cce5f820-2f39-4219-b2c0-dfde32336885",
+      "category": "bottoms",
+      "introduced_phase": 2,
+      "cf_risk": "very_high",
+      "predictions": {
+        "random": "crafted with a contoured high waist and slightly more room in the thigh these vintage inspired jeans jeans are",
+        "diversity": "a slim fit and straight leg that hit right above the ankle give flattering everyday appeal to these stretchy",
+        "uncertainty": "crafted to look like vintage favorite these high waist jeans are cut from medium blue japanese denim in"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "0725b390-b5c0-4ac5-b487-d19960540ab0",
+      "category": "dresses",
+      "introduced_phase": 3,
+      "cf_risk": "high",
+      "predictions": {
+        "random": "a cozy a your favorite sweater and polished enough for the office this mesh knit dress is sure to be",
+        "diversity": "put some sparkle in your sweater dress collection in this wool blend version that feature scalloped stripe",
+        "uncertainty": "pale stripe run down each side of this simple a line dress styled for desk to dinner duty with"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "1d82772e-57be-48ce-8479-07eaec328fd2",
+      "category": "dresses",
+      "introduced_phase": 3,
+      "cf_risk": "high",
+      "predictions": {
+        "random": "sparkling crystal embellishment illuminate every edge of a prim collared shift woven from exquisite french wool",
+        "diversity": "a lacy sweetener top off this party ready dress that call out your curve with a body sk",
+        "uncertainty": "a lacy floral panel at the yoke make this pale pink dress even fresher while box and"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "0549f392-6964-4e81-a8a8-8df955832e23",
+      "category": "dresses",
+      "introduced_phase": 3,
+      "cf_risk": "high",
+      "predictions": {
+        "random": "demure sleeve and a v neck add to the timeless elegance of a versatile fit and flare frock",
+        "diversity": "puffed sleeve eased off the shoulder bring an 80 vibe to this crisp babydoll dress that stay",
+        "uncertainty": "densely patterned blossom bring touch of romance to this versatile midi in a simple stylish"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "63aa11e7-fa2b-4983-a822-478ecfd931e4",
+      "category": "dresses",
+      "introduced_phase": 3,
+      "cf_risk": "high",
+      "predictions": {
+        "random": "gauzy sleeve add an extra touch of elegance to a flowing wrap dress finished with a graceful ple",
+        "diversity": "gauzy sleeve add an extra touch of elegance to a flowing wrap dress with a elegantly sweeping",
+        "uncertainty": "gauzy sleeve add an extra touch of elegance to a flowing wrap dress finished with a elegantly"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "487f47f6-be86-4731-9b5e-ce1b0fa2cb7b",
+      "category": "outerwear",
+      "introduced_phase": 4,
+      "cf_risk": "medium",
+      "predictions": {
+        "random": "go from the disco to the rodeo with this lambskin leather jacket in a gleaming golden",
+        "diversity": "a sleek and modern moto jacket to make your everyday go to is crafted of exquisitely supp",
+        "uncertainty": "a glam version of the classic leather moto jacket is crafted with a perfectly draped front with metallic touch"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "c4f22be0-765e-4ee0-8b76-4693c5678aad",
+      "category": "outerwear",
+      "introduced_phase": 4,
+      "cf_risk": "medium",
+      "predictions": {
+        "random": "cold weather is no reason to postpone a run or a ride in this lightweight breathable jacket with a",
+        "diversity": "this hooded jacket ensures that you re ready for all sort of weather condition with waterproof windproof protection",
+        "uncertainty": "based on the archival style of 1990 this hooded shell jacket conquers heavy windstorm and down"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "53a6359b-c2b0-434b-9a58-adad277b6594",
+      "category": "outerwear",
+      "introduced_phase": 4,
+      "cf_risk": "medium",
+      "predictions": {
+        "random": "channel quilted 750 fill power down target the cold to keep you warm and comfortable in a water",
+        "diversity": "channel quilted 750 fill power down target the cold to keep you warm in a hooded jacket",
+        "uncertainty": "channel quilted 750 fill power down target the cold to keep you warm a you ride all day"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "b949cb5f-c075-471f-ad40-e531d9c99881",
+      "category": "shoes",
+      "introduced_phase": 5,
+      "cf_risk": "low",
+      "predictions": {
+        "random": "a woodgrain platform add eye catching style to a boot that s a retro standout with a retro inspired",
+        "diversity": "a woodgrain platform add eye catching style to a boot that s a retro standout with a supple",
+        "uncertainty": "a woodgrain platform add eye catching style to a boot that s a retro standout with a stacked heel"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "14da089d-c6db-46f8-8b95-170c514a8610",
+      "category": "shoes",
+      "introduced_phase": 5,
+      "cf_risk": "low",
+      "predictions": {
+        "random": "angular d ring hardware anchor the lace on an otherwise streamlined mid top boot styled with an easy on side",
+        "diversity": "a lining of genuine shearling provides an indulgent finish for a wedge boot made with aquatalia",
+        "uncertainty": "lightweight and breathable with memory foam cushioning and a nonskid sole this pull on boot is"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "5dd70dde-7e1a-4fd7-8230-fed790834e14",
+      "category": "shoes",
+      "introduced_phase": 5,
+      "cf_risk": "low",
+      "predictions": {
+        "random": "a sleek stacked wedge lift a classic boot updated with an asymmetrical topline and low block heel",
+        "diversity": "a sleek stacked wedge lift a classic boot updated with an asymmetrical topline and a deep front",
+        "uncertainty": "a sleek stacked wedge lift a classic boot updated with an asymmetrical topline and a low block"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "7e4d8efb-c3e1-416b-af5a-c6e000e5e8aa",
+      "category": "tops",
+      "introduced_phase": 6,
+      "cf_risk": "lowest",
+      "predictions": {
+        "random": "crinkled fabric add subtle texture to this sophisticated go to top cut with a slouchy fit",
+        "diversity": "crinkled fabric add subtle texture to this sophisticated go to top that s ready to elevate your casual",
+        "uncertainty": "crinkled fabric add subtle texture to this sophisticated go to top that s easy to wear a an"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "81fb2f7d-4aef-4f9c-be0e-d1acb584a774",
+      "category": "tops",
+      "introduced_phase": 6,
+      "cf_risk": "lowest",
+      "predictions": {
+        "random": "delicate charm defines this soft satiny tank punctuated with an easy layered hem and cut with a",
+        "diversity": "delicate charm defines this soft satiny tank punctuated with an easy layered hemline and punctuated",
+        "uncertainty": "delicate charm defines this soft satiny tank punctuated with an easy layered hem and cut to a"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    },
+    {
+      "image_id": "3f72514b-2731-4809-832f-d5159814583b",
+      "category": "tops",
+      "introduced_phase": 6,
+      "cf_risk": "lowest",
+      "predictions": {
+        "random": "this polished crepe blouse is designed with a shapely twisted front for day to night perfection and",
+        "diversity": "sleek button line the drapey back of this blouse styled with a flattering v neck and",
+        "uncertainty": "this airy crepe blouse flaunt a shapely side gather for eye catching charm while the"
+      },
+      "diversity_score": 3,
+      "is_diverse": true
+    }
+  ]
+}
