@@ -41,6 +41,34 @@ st.markdown("""
         --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         --radius: 8px;
     }
+    /* All text elements - ensure visibility */
+    p, li, span, div, h1, h2, h3, h4, h5, h6, label {
+        color: #262730 !important;
+    }
+
+    /* Info card text fixes */
+    .info-card h3 {
+        color: #262730 !important;
+        margin-bottom: 1rem;
+    }
+
+    .info-card p, .info-card li {
+        color: #262730 !important;
+    }
+
+    /* Radio button styling */
+    .stRadio > div {
+        color: #262730 !important;
+    }
+
+    .stRadio label {
+        color: #262730 !important;
+    }
+
+    /* Success message text */
+    .success-message h4 {
+        color: #065F46 !important;
+    }
     
     .main-header {
         background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
@@ -492,15 +520,16 @@ def show_welcome_page():
     st.markdown("---")
     st.markdown("## 📝 Required Information")
     
-    fashion_interest = st.selectbox(
+    fashion_interest = st.radio(
         "How interested are you in fashion? (Required for research context)",
-        ["", "Very interested", "Somewhat interested", "Moderately interested", 
-         "Slightly interested", "Not particularly interested"],
+        ["Very interested", "Somewhat interested", "Moderately interested", 
+        "Slightly interested", "Not particularly interested"],
+        index=None,
         help="This helps us understand participant background"
     )
     
     consent = st.checkbox(
-        "✅ I have read the study information above and consent to participate in this research (Required)",
+        "I have read the study information above and consent to participate in this research (Required)",
         help="Required to proceed to the study"
     )
     
