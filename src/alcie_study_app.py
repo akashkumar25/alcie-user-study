@@ -30,7 +30,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 def get_gsheet_connection():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        st.secrets["gspread_service_account"], scope
+        st.secrets["alcie-463022-f43b711b72bc"], scope
     )
     client = gspread.authorize(creds)
     return client
