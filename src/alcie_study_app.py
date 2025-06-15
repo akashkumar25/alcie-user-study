@@ -39,7 +39,7 @@ def save_response_to_sheet(row_data, worksheet_name="MainResponses"):
     try:
         # Authorize using credentials from secrets.toml
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["alcie-463022-f43b711b72bc"], scope)
         client = gspread.authorize(creds)
 
         sheet = client.open("ALCIE User Study Responses")  # Change if needed
