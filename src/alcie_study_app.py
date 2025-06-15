@@ -24,7 +24,31 @@ from datetime import datetime
 from PIL import Image
 import time
 import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
+def get_gsheet_connection():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gspread_service_account"], scope
+    )
+    client = gspread.authorize(creds)
+    return client
+
+def save_response_to_sheet(row_data, worksheet_name="MainResponses"):
+    try:
+        # Authorize using credentials from secrets.toml
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+        client = gspread.authorize(creds)
+
+        sheet = client.open("ALCIE User Study Responses")  # Change if needed
+        worksheet = sheet.worksheet(worksheet_name)
+
+        worksheet.append_row(row_data)
+    except Exception as e:
+        st.warning(f"❗ Could not save to Google Sheet ({worksheet_name}): {e}")
+    
 # Custom CSS for modern design
 st.markdown("""
 <style>
@@ -961,25 +985,17 @@ def complete_study(age, gender, quality_patterns, better_categories, worse_categ
             os.makedirs(output_dir, exist_ok=True)
             category_output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_category_assessments.csv")
             category_df.to_csv(category_output_file, index=False)
+            # Send each category to "CategoryAssessments" tab
+            for _, row in category_df.iterrows():
+                save_response_to_sheet(row.tolist(), worksheet_name="CategoryAssessments")
         
-        # Save individual CSV
-        filename = f"alcie_responses_{st.session_state.participant_id}.csv"
-        df.to_csv(filename, index=False)
-        
-        # Save to aggregated file
-        aggregate_file = "all_alcie_responses.csv"
-        if os.path.exists(aggregate_file):
-            existing_df = pd.read_csv(aggregate_file)
-            combined_df = pd.concat([existing_df, df], ignore_index=True)
-            combined_df.to_csv(aggregate_file, index=False)
-        else:
-            df.to_csv(aggregate_file, index=False)
 
         # Save to 'responses/' directory
         output_dir = "responses"
         os.makedirs(output_dir, exist_ok=True)
         output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_responses.csv")
         df.to_csv(output_file, index=False)
+        save_response_to_sheet(df.iloc[0].tolist(), worksheet_name="MainResponses")
 
         st.success("✅ Your responses have been saved securely. Thank you for your time!")
         
