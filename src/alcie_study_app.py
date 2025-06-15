@@ -81,9 +81,15 @@ st.markdown("""
     }
 }
 
+/* Force consistent light appearance */
+body, .stApp {
+    background-color: #FFFFFF !important;
+    color: #212529 !important;
+}
+
 /* Global Text Styling */
 body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
-    color: var(--text-primary) !important;
+    color: #212529 !important;
 }
 
 /* Header */
@@ -103,8 +109,9 @@ body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
 
 /* Cards */
 .info-card, .caption-box, .progress-box, .success-message {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
+    background: #F8F9FA !important;
+    color: #212529 !important;
+    border: 1px solid #DEE2E6 !important;
     border-radius: var(--radius);
     padding: 1rem;
     box-shadow: var(--shadow);
@@ -147,42 +154,31 @@ body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
 .stSelectbox [data-testid="stSelectbox"],
 .stMultiSelect > div > div,
 .stMultiSelect [data-testid="stMultiSelect"] {
-    background-color: var(--bg-primary) !important;
-    color: var(--text-primary) !important;
-    border: 1px solid var(--border-color) !important;
+    background-color: #F8F9FA !important;
+    color: #212529 !important;
+    border: 1px solid #DEE2E6 !important;
 }
 
 [data-baseweb="popover"],
+[data-baseweb="select"],
 [data-baseweb="popover"] ul,
 [data-baseweb="popover"] li,
 [data-baseweb="popover"] li:hover,
-[data-baseweb="select"],
+[data-baseweb="option"],
+[data-baseweb="option"]:hover,
 [data-baseweb="tag"] {
-    background-color: var(--bg-primary) !important;
-    color: var(--text-primary) !important;
+    background-color: #F8F9FA !important;
+    color: #212529 !important;
+    border: none !important;
 }
 
 /* Hide Streamlit Elements */
-#MainMenu, footer, header, .stDeployButton {visibility: hidden;}
-
-
-/* === FORCE LIGHT THEME OVERRIDE === */
-body, .stApp {
-    background: #FFFFFF !important;
-    color: #212529 !important;
-}
-
-.caption-box, .progress-box, .info-card, .success-message {
-    background: #F8F9FA !important;
-    color: #212529 !important;
-    border-color: #DEE2E6 !important;
-}
-
-p, li, span, div, h1, h2, h3, h4, h5, h6 {
-    color: #212529 !important;
+#MainMenu, footer, header, .stDeployButton {
+    visibility: hidden;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
