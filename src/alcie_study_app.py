@@ -1055,6 +1055,33 @@ def show_transition_message(message="Loading next image..."):
 
 # Main app logic
 def main():
+    
+    st.markdown("""
+    <style>
+    /* Force readable text colors */
+    .stApp {
+        color: #262730 !important;
+        background: #FFFFFF !important;
+    }
+    
+    /* All text elements */
+    p, li, span, div, h1, h2, h3, h4, h5, h6 {
+        color: #262730 !important;
+    }
+    
+    /* Card backgrounds */
+    .info-card {
+        background: #F8F9FA !important;
+        color: #262730 !important;
+        border: 1px solid #DEE2E6 !important;
+    }
+    
+    /* Make sure text is always visible */
+    .element-container {
+        color: #262730 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     """Main application"""
     st.markdown('<a id="scroll-top"></a>', unsafe_allow_html=True)
 
