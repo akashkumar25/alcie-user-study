@@ -533,20 +533,17 @@ def show_welcome_page():
         help="Required to proceed to the study"
     )
     
-    with st.form(key="start_study_form"):
-        start = st.form_submit_button("🚀 Start Study", use_container_width=True)
-
-        if start:
-            if not consent:
-                st.error("❌ Please check the consent box to continue")
-            elif not fashion_interest:
-                st.error("❌ Please select your fashion interest level")
-            else:
-                st.session_state.consent_given = True
-                st.session_state.fashion_interest = fashion_interest
-                st.session_state.study_started = True
-                st.session_state.show_transition_banner = "start_study"
-                st.rerun()
+    if st.button("🚀 Start Study", type="primary", use_container_width=True):
+        if not consent:
+            st.error("❌ Please check the consent box to continue")
+        elif not fashion_interest:
+            st.error("❌ Please select your fashion interest level")
+        else:
+            st.session_state.consent_given = True
+            st.session_state.fashion_interest = fashion_interest
+            st.session_state.study_started = True
+            st.session_state.show_transition_banner = "start_study"
+            st.rerun()
 
 
 def get_current_sample():
