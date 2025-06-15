@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 """
-ALCIE User Study Interface - Streamlit App
-Pure human evaluation of AI-generated fashion captions
+ALCIE User Study - Complete Streamlit Version
+Enhanced UI with automatic data collection and between-category assessments
+Run with: streamlit run alcie_study_streamlit.py
 """
 
 import streamlit as st
-import json
-import pandas as pd
-import numpy as np
-import random
-from pathlib import Path
 
-# Page configuration
+# Page configuration - MUST BE FIRST AND ONLY ONCE
 st.set_page_config(
     page_title="ALCIE User Study",
     page_icon="🎯",
@@ -19,529 +15,1017 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for professional look
+# Now import everything else
+import json
+import pandas as pd
+import random
+import os
+from datetime import datetime
+from PIL import Image
+import time
+import os
+
+# Custom CSS for modern design
 st.markdown("""
 <style>
+    /* Modern, clean design */
+    :root {
+        --primary-color: #4F46E5;
+        --primary-dark: #3730A3;
+        --success-color: #10B981;
+        --text-primary: #1F2937;
+        --text-secondary: #6B7280;
+        --bg-primary: #FFFFFF;
+        --bg-secondary: #F9FAFB;
+        --border-color: #E5E7EB;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        --radius: 8px;
+    }
+    
     .main-header {
-        font-size: 2.5rem;
-        color: #1f77b4;
-        text-align: center;
-        margin-bottom: 1rem;
-        font-weight: 600;
-    }
-    .sub-header {
-        font-size: 1.2rem;
-        color: #666;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .caption-box {
-        background-color: #f8f9fa;
-        padding: 1.2rem;
-        border-radius: 8px;
-        margin: 0.8rem 0;
-        border-left: 4px solid #1f77b4;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        font-size: 1.1rem;
-        line-height: 1.4;
-    }
-    .category-tag {
-        display: inline-block;
-        background-color: #17a2b8;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
         color: white;
-        padding: 0.4rem 0.8rem;
-        border-radius: 6px;
-        font-size: 0.9rem;
+        text-align: center;
+        padding: 2rem;
+        margin: -1rem -1rem 2rem -1rem;
+        border-radius: 0 0 var(--radius) var(--radius);
+        box-shadow: var(--shadow);
+    }
+    
+    .main-header h1 {
+        color: white !important;
+        margin: 0;
+        font-size: 2rem;
         font-weight: 600;
-        margin-right: 0.5rem;
     }
-    .instruction-box {
-        background-color: #e8f4f8;
-        padding: 1.2rem;
-        border-radius: 8px;
+    
+    .main-header h3 {
+        color: rgba(255,255,255,0.9) !important;
+        margin: 0.5rem 0 0 0;
+        font-weight: 400;
+    }
+    
+    .info-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 1.5rem;
         margin: 1rem 0;
-        border-left: 4px solid #17a2b8;
+        box-shadow: var(--shadow);
     }
-    .progress-info {
-        background-color: #f0f2f6;
+    
+    .caption-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
         padding: 1rem;
-        border-radius: 8px;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    
+    .progress-box {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 1rem;
+        text-align: center;
+        margin: 1rem 0;
+        font-weight: 500;
+    }
+    
+    .category-badge {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-block;
+        margin: 0.5rem 0;
+    }
+    
+    .success-message {
+        background: #D1FAE5;
+        border: 1px solid var(--success-color);
+        color: #065F46;
+        border-radius: var(--radius);
+        padding: 1rem;
         margin: 1rem 0;
         text-align: center;
     }
-    .stSelectSlider > div > div > div {
-        background-color: #e3f2fd;
+    
+    .stButton > button {
+        background: var(--primary-color) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: var(--radius) !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1.5rem !important;
+        transition: all 0.2s !important;
     }
+    
+    .stButton > button:hover {
+        background: var(--primary-dark) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: var(--shadow) !important;
+    }
+    
+    /* Hide streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    .stDeployButton {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
-class ALCIEStudyApp:
+class ALCIEStreamlitApp:
     def __init__(self):
-        self.study_dataset_file = "alcie_study_dataset.json"
-        self.initialize_session_state()
-    
-    def initialize_session_state(self):
-        """Initialize all session state variables"""
-        if 'study_data' not in st.session_state:
-            st.session_state.study_data = self.load_study_data()
-            st.session_state.current_sample = 0
-            st.session_state.responses = []
-            st.session_state.participant_id = f"P{random.randint(1000, 9999)}"
-            st.session_state.study_started = False
-            st.session_state.consent_given = False
-    
-    def load_study_data(self):
-        """Load and randomize study dataset"""
+        self.study_dataset_file = "data/alcie_study_dataset.json"
+        self.images_directory = "images/"
+        self.load_data()
+        
+    def load_data(self):
+        """Load and shuffle study data"""
         try:
             with open(self.study_dataset_file, 'r') as f:
                 data = json.load(f)
-            
-            # Randomize sample order for each participant
-            samples = data['samples'].copy()
-            random.shuffle(samples)
-            data['samples'] = samples
-            
-            return data
-        except FileNotFoundError:
-            st.error(f"❌ Study dataset not found: {self.study_dataset_file}")
-            st.info("Please make sure you've run the data processor first!")
-            st.stop()
+            self.study_data = data['samples'].copy()
+            # random.shuffle(self.study_data)
+            self.study_data = sorted(
+                data["samples"],
+                key=lambda x: (x["category"], x["assigned_phase"])
+            )
+            return True
         except Exception as e:
-            st.error(f"❌ Error loading study data: {e}")
-            st.stop()
+            st.error(f"❌ Error loading data: {e}")
+            return False
     
-    def show_welcome_page(self):
-        """Welcome page with consent and instructions"""
-        st.markdown('<h1 class="main-header">ALCIE User Study</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Active Learning for Continual Image Captioning Enhancement</p>', unsafe_allow_html=True)
+    def get_image_path(self, image_id):
+        """Get PIL Image object"""
+        for ext in ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG']:
+            image_path = os.path.join(self.images_directory, f"{image_id}{ext}")
+            if os.path.exists(image_path):
+                try:
+                    return Image.open(image_path)
+                except Exception as e:
+                    st.error(f"Error loading image {image_path}: {e}")
+                    continue
+        return None
+
+# Initialize app
+@st.cache_resource
+def get_app():
+    return ALCIEStreamlitApp()
+
+app = get_app()
+
+# Session state initialization
+def init_session_state():
+    if 'study_started' not in st.session_state:
+        st.session_state.study_started = False
+        st.session_state.current_sample_idx = 0
+        st.session_state.responses = []
+        st.session_state.participant_id = f"P{random.randint(1000, 9999)}"
+        st.session_state.fashion_interest = None
+        st.session_state.consent_given = False
+        st.session_state.study_complete = False
+
+init_session_state()
+
+# NEW: Helper functions for category assessment
+def should_show_category_assessment():
+    """Determine if we should show category assessment"""
+    if st.session_state.current_sample_idx == 0:
+        return False, None, None
+    
+    if st.session_state.current_sample_idx >= len(app.study_data):
+        return False, None, None
+    
+    # Check if we're transitioning to a new category
+    current_sample = app.study_data[st.session_state.current_sample_idx]
+    previous_sample = app.study_data[st.session_state.current_sample_idx - 1]
+    
+    current_category = current_sample['category']
+    previous_category = previous_sample['category']
+    
+    # Show assessment when transitioning to a new category
+    if current_category != previous_category:
+        # Don't show if we've already assessed this transition
+        transition_key = f"{previous_category}_to_{current_category}"
+        if not hasattr(st.session_state, 'assessed_transitions'):
+            st.session_state.assessed_transitions = set()
         
-        st.markdown("---")
-        
-        # Study overview
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 📋 Study Overview")
-            st.markdown("""
-            **Purpose:** Evaluate AI-generated fashion captions from different learning strategies
-            
-            **Duration:** 20-25 minutes
-            
-            **Your task:** 
-            - View fashion images and their categories
-            - Rate 3 AI-generated captions per image
-            - Select which caption you think is best
-            """)
-        
-        with col2:
-            st.markdown("### 🏛️ Research Team")
-            st.markdown("""
-            **Institution:** DFKI (German Research Center for AI)
-            
-            **Researcher:** Akash Kumar
-            
-            **Supervisor:** Aliki Anagnostopoulou
-            
-            **Privacy:** All responses are completely anonymous
-            """)
-        
-        # Detailed instructions
-        st.markdown("### 📊 How to Rate Captions")
-        
-        instructions = """
-        For each image, you'll see **3 different AI-generated captions** labeled A, B, and C.  
-        Please rate each caption on **4 dimensions** using a 1-5 scale:
-        
-        - **Relevance** (1=Completely wrong → 5=Perfectly accurate)
-        - **Fluency** (1=Very awkward English → 5=Very natural English) 
-        - **Descriptiveness** (1=Too vague → 5=Very detailed and informative)
-        - **Novelty** (1=Very boring → 5=Very creative and interesting)
-        
-        Then select which caption you think is **best overall**.
-        """
-        
-        st.markdown('<div class="instruction-box">' + instructions + '</div>', unsafe_allow_html=True)
-        
-        # Fashion interest screening
-        st.markdown("### 👗 Background Information")
-        fashion_interest = st.selectbox(
-            "How would you describe your interest in fashion?",
-            ["", "Very interested", "Somewhat interested", "Moderately interested", 
-             "Slightly interested", "Not particularly interested"],
-            key="fashion_interest"
+        if transition_key not in st.session_state.assessed_transitions:
+            return True, previous_category, current_category
+    
+    return False, None, None
+
+def show_category_transition_assessment(previous_category, current_category):
+    """Show assessment when transitioning between categories"""
+    
+    st.markdown("---")
+    st.markdown(f"""
+    <div class="info-card" style="background: #FEF3C7; border-color: #F59E0B;">
+        <h3>📊 Quick Category Assessment</h3>
+        <p><strong>You've just completed:</strong> {previous_category} items</p>
+        <p><strong>Now starting:</strong> {current_category} items</p>
+        <p>This helps us understand quality patterns across fashion categories.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        quality_assessment = st.radio(
+            f"How would you rate the overall caption quality for {previous_category} items?",
+            ["Excellent", "Good", "Average", "Below average", "Poor"],
+            index=None,
+            key=f"quality_{previous_category.lower()}_assessment",
+            help="Think about the captions you just evaluated for this category"
         )
         
-        # Consent section
-        st.markdown("### ✅ Informed Consent")
-        st.markdown("""
-        **By participating, I understand that:**
-        - My participation is completely voluntary
-        - I can stop at any time without any consequences
-        - My responses will be analyzed anonymously for research purposes
-        - Results may be published in academic papers and presentations
-        - No personal identifying information will be collected
-        - This research is conducted by DFKI for advancing AI technology
-        """)
-        
-        consent_checkbox = st.checkbox(
-            "I have read the above information and consent to participate in this research study", 
-            key="consent"
+        quality_drop = st.radio(
+            f"Did you notice any quality decrease in {previous_category} captions?",
+            ["No decrease", "Slight decrease", "Moderate decrease", "Significant decrease", "Major decrease"],
+            index=None,
+            key=f"quality_drop_{previous_category.lower()}",
+            help="Compare to your expectations or other categories you've seen"
+        )
+    
+    with col2:
+        consistency = st.radio(
+            f"How consistent were the {previous_category} captions?",
+            ["Very consistent", "Mostly consistent", "Somewhat consistent", "Inconsistent", "Very inconsistent"],
+            index=None,
+            key=f"consistency_{previous_category.lower()}",
+            help="Did caption quality vary a lot within this category?"
         )
         
-        # Start study button
-        if consent_checkbox and fashion_interest:
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col2:
-                if st.button("🚀 Start Study", type="primary", use_container_width=True):
-                    st.session_state.consent_given = True
-                    st.session_state.study_started = True
-                    st.session_state.fashion_interest = fashion_interest
-                    st.rerun()
-        elif fashion_interest:
-            st.info("📝 Please check the consent box to continue")
+        expectations = st.radio(
+            f"Did {previous_category} captions meet your expectations?",
+            ["Exceeded expectations", "Met expectations", "Below expectations", "Well below expectations"],
+            index=None,
+            key=f"expectations_{previous_category.lower()}",
+            help="Based on what you'd expect for AI-generated fashion descriptions"
+        )
+    
+    comments = st.text_area(
+        f"Any specific observations about {previous_category} captions?",
+        placeholder=f"Optional: What did you notice about {previous_category} descriptions?",
+        height=80,
+        key=f"comments_{previous_category.lower()}"
+    )
+    
+    if st.button(f"Continue to {current_category} →", type="primary", use_container_width=True):
+        # Validate that all radio buttons are selected
+        if not quality_assessment:
+            st.error("❌ Please rate the overall caption quality")
+        elif not quality_drop:
+            st.error("❌ Please indicate if you noticed any quality decrease")
+        elif not consistency:
+            st.error("❌ Please rate the consistency of captions")
+        elif not expectations:
+            st.error("❌ Please indicate if captions met your expectations")
         else:
-            st.info("📝 Please select your fashion interest level to continue")
-    
-    def show_study_interface(self):
-        """Main study interface for caption evaluation"""
-        
-        # Check if study is complete
-        if st.session_state.current_sample >= len(st.session_state.study_data['samples']):
-            self.show_completion_page()
-            return
-        
-        current_sample = st.session_state.study_data['samples'][st.session_state.current_sample]
-        
-        # Header
-        st.markdown('<h1 class="main-header">Fashion Caption Evaluation</h1>', unsafe_allow_html=True)
-        
-        # Progress tracking
-        progress = (st.session_state.current_sample + 1) / len(st.session_state.study_data['samples'])
-        current_num = st.session_state.current_sample + 1
-        total_num = len(st.session_state.study_data['samples'])
-        
-        st.markdown(f'<div class="progress-info">', unsafe_allow_html=True)
-        st.progress(progress)
-        st.markdown(f"**Progress:** Image {current_num} of {total_num}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Category and phase information
-        category = current_sample['category']
-        cf_risk = current_sample['cf_risk']
-        phase = current_sample['introduced_phase']
-        
-        st.markdown(
-            f'<span class="category-tag">{category.upper()}</span>'
-            f'<span style="color: #666; font-size: 0.9rem;">Learning Phase {phase} • '
-            f'{cf_risk.replace("_", " ").title()} Forgetting Risk</span>', 
-            unsafe_allow_html=True
-        )
-        
-        st.markdown("---")
-        
-        # Image placeholder (since we're not using actual images)
-        st.markdown("### 👗 Fashion Item")
-        st.info(f"**Category:** {category.upper()} | **Image ID:** {current_sample['image_id']}")
-        st.markdown("*Imagine a typical fashion item from this category while evaluating the captions below.*")
-        
-        # Caption evaluation section
-        self.show_caption_evaluation(current_sample)
-    
-    def show_caption_evaluation(self, sample):
-        """Display caption evaluation interface"""
-        
-        st.markdown("### 📝 Caption Evaluation")
-        st.markdown("Please rate each caption on all four dimensions, then select your favorite:")
-        
-        # Get predictions and randomize their order
-        predictions = sample['predictions']
-        methods = list(predictions.keys())
-        random.shuffle(methods)  # Different order for each participant
-        
-        # Store method mapping for this sample
-        caption_labels = [f"Caption {chr(65 + i)}" for i in range(len(methods))]
-        method_mapping = {caption_labels[i]: methods[i] for i in range(len(methods))}
-        
-        responses = {}
-        
-        # Evaluate each caption
-        for i, method in enumerate(methods):
-            label = caption_labels[i]
-            caption_text = predictions[method]
-            
-            st.markdown(f"#### {label}")
-            st.markdown(f'<div class="caption-box">"{caption_text}"</div>', unsafe_allow_html=True)
-            
-            # Rating scales in columns
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                relevance = st.select_slider(
-                    "Relevance",
-                    options=[1, 2, 3, 4, 5],
-                    value=3,
-                    key=f"relevance_{i}",
-                    help="How accurately does it describe the fashion item?"
-                )
-            
-            with col2:
-                fluency = st.select_slider(
-                    "Fluency",
-                    options=[1, 2, 3, 4, 5],
-                    value=3,
-                    key=f"fluency_{i}",
-                    help="How natural and well-written is the English?"
-                )
-            
-            with col3:
-                descriptiveness = st.select_slider(
-                    "Descriptiveness",
-                    options=[1, 2, 3, 4, 5],
-                    value=3,
-                    key=f"descriptiveness_{i}",
-                    help="How detailed and informative is it?"
-                )
-            
-            with col4:
-                novelty = st.select_slider(
-                    "Novelty",
-                    options=[1, 2, 3, 4, 5],
-                    value=3,
-                    key=f"novelty_{i}",
-                    help="How creative and interesting is the description?"
-                )
-            
-            responses[method] = {
-                'relevance': relevance,
-                'fluency': fluency,
-                'descriptiveness': descriptiveness,
-                'novelty': novelty
+            # Store the assessment data
+            assessment_data = {
+                'participant_id': st.session_state.participant_id,
+                'response_type': 'category_assessment',
+                'previous_category': previous_category,
+                'current_category': current_category,
+                'sample_idx_at_transition': st.session_state.current_sample_idx,
+                'quality_rating': quality_assessment,
+                'quality_drop': quality_drop,
+                'consistency_rating': consistency,
+                'expectations_rating': expectations,
+                'comments': comments,
+                'timestamp': datetime.now().isoformat()
             }
             
-            st.markdown("---")
+            # Store in session state
+            if 'category_assessments' not in st.session_state:
+                st.session_state.category_assessments = []
+            st.session_state.category_assessments.append(assessment_data)
+            
+            # Mark this transition as assessed
+            transition_key = f"{previous_category}_to_{current_category}"
+            st.session_state.assessed_transitions.add(transition_key)
+            
+            # Set flag to show transition message
+            st.session_state.show_transition_banner = f"category_transition_{current_category}"
+            st.session_state.show_category_assessment = False
+            st.rerun()
+
+def show_welcome_page():
+    """Show welcome and consent page"""
+    
+    # Header
+    st.markdown("""
+    <div class="main-header">
+        <h1>🎯 ALCIE Fashion Study</h1>
+        <h3>Active Learning for Continual Image Captioning Enhancement</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Quick overview
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        <div class="info-card">
+        <h3>👋 Welcome & Thank You!</h3>
+        <p>We're excited to have you participate in our AI research! Your insights will help us build better AI systems for fashion e-commerce and visual understanding.</p>
         
-        # Overall preference selection
-        st.markdown("### 🏆 Overall Preference")
-        best_caption_label = st.radio(
-            "Which caption do you think is **best overall**?",
-            options=caption_labels,
-            key="best_caption",
-            horizontal=True
-        )
+        <p><strong>What you'll do:</strong> Evaluate AI-generated fashion captions and help us understand what makes descriptions effective.</p>
         
-        # Optional comments
-        comment = st.text_area(
-            "💭 Additional Comments (Optional)",
-            placeholder="Any thoughts about these captions or the fashion item?",
-            key="comment",
-            max_chars=300,
-            height=80
-        )
+        <p><strong>Your impact:</strong> Your feedback directly contributes to advancing AI technology used by millions of online shoppers.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class="info-card">
+        <h3>📊 Study Quick Facts</h3>
+        <ul>
+        <li><strong>Duration:</strong> 15-20 minutes</li>
+        <li><strong>Task:</strong> Rate AI fashion captions</li>
+        <li><strong>Categories:</strong> 6 fashion types</li>
+        <li><strong>Privacy:</strong> Completely anonymous</li>
+        <li><strong>Institution:</strong> DFKI (German AI Research Center)</li>
+        <li><strong>Researcher:</strong> Akash Kumar</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Research background
+    st.markdown("""
+    ## 🔬 What This Study Is About
+    
+    **Research Focus:** We're investigating how AI systems learn to describe fashion items and whether they maintain quality when learning new categories over time.
+    
+    **Your Role:** As someone interested in fashion, you'll evaluate AI-generated captions on four key aspects: relevance, fluency, descriptiveness, and novelty.
+    
+    **Scientific Impact:** Results will be published in academic conferences and help advance computer vision and natural language processing.
+    """)
+    
+    # Study guide
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        ### 🎯 Your Task Overview
+
+        **What You'll Evaluate:** AI-generated fashion descriptions
+
+        **Sample Size:** 24 fashion images, grouped by fashion category
+
+        **Your Role:** Rate 3 different AI captions per image
+
+        **Categories Included:**
+        - 👜 **Accessories** (bags, jewelry, belts)
+        - 👖 **Bottoms** (jeans, skirts, pants) 
+        - 👗 **Dresses** (casual, formal, work)
+        - 🧥 **Outerwear** (jackets, coats, blazers)
+        - 👠 **Shoes** (sneakers, heels, boots)
+        - 👕 **Tops** (shirts, blouses, sweaters)
+
+        Images will be shown **category by category**, and for each image, you'll see **three different AI-generated captions**.
+
+        🧠 **As you go through the study, try to notice if the captions seem more or less accurate or descriptive across different categories.**
+        """)
+
+    
+    with col2:
+        st.markdown("""
+        ### 📊 Rating Criteria Explained
         
-        # Submit button
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("✅ Submit & Continue", type="primary", use_container_width=True):
-                best_method = method_mapping[best_caption_label]
-                self.save_response(sample, responses, best_method, comment, method_mapping)
-                st.session_state.current_sample += 1
-                
-                # Clear form state for next sample
-                for key in list(st.session_state.keys()):
-                    if key.startswith(('relevance_', 'fluency_', 'descriptiveness_', 'novelty_', 'best_caption', 'comment')):
-                        del st.session_state[key]
-                
+        **Relevance (1-5):** Does it accurately describe what's in the image?
+        - *5 = Perfect match, 1 = Completely wrong*
+        
+        **Fluency (1-5):** How natural does the English sound?
+        - *5 = Perfect grammar, 1 = Hard to understand*
+        
+        **Descriptiveness (1-5):** How much useful detail does it provide?
+        - *5 = Very detailed, 1 = Too vague*
+        
+        **Novelty (1-5):** How interesting or creative is the description?
+        - *5 = Very engaging, 1 = Boring/generic*
+        """)
+    
+    # Privacy section
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        ### 🛡️ Your Privacy & Rights
+        
+        **What We Guarantee:**
+        - **Complete anonymity** - no personal information collected
+        - **Voluntary participation** - stop anytime without consequences  
+        - **Secure data handling** - research-grade privacy protection
+        - **Academic use only** - helps science, not commercial interests
+        
+        **Your Rights:**
+        - Ask questions about the research anytime
+        - Withdraw participation without explanation
+        - Request study results after completion
+        """)
+    
+    with col2:
+        st.markdown("""
+        ### 📞 Contact & Institution
+        
+        **Researcher:** Akash Kumar (akash.kumar@dfki.de)  
+        **Institution:** DFKI - German Research Center for Artificial Intelligence  
+        **Website:** www.dfki.de
+        
+        Feel free to contact us with any questions about this research!
+        
+        ### 💡 Important Reminders
+        
+        - **No wrong answers** - we want YOUR honest opinions
+        - **Trust your instincts** - your natural reactions are what we need  
+        - **Take your time** - quality feedback is more valuable than speed
+        """)
+    
+    # Required information
+    st.markdown("---")
+    st.markdown("## 📝 Required Information")
+    
+    fashion_interest = st.selectbox(
+        "How interested are you in fashion? (Required for research context)",
+        ["", "Very interested", "Somewhat interested", "Moderately interested", 
+         "Slightly interested", "Not particularly interested"],
+        help="This helps us understand participant background"
+    )
+    
+    consent = st.checkbox(
+        "✅ I have read the study information above and consent to participate in this research (Required)",
+        help="Required to proceed to the study"
+    )
+    
+    with st.form(key="start_study_form"):
+        start = st.form_submit_button("🚀 Start Study", use_container_width=True)
+
+        if start:
+            if not consent:
+                st.error("❌ Please check the consent box to continue")
+            elif not fashion_interest:
+                st.error("❌ Please select your fashion interest level")
+            else:
+                st.session_state.consent_given = True
+                st.session_state.fashion_interest = fashion_interest
+                st.session_state.study_started = True
+                st.session_state.show_transition_banner = "start_study"
                 st.rerun()
+
+
+def get_current_sample():
+    """Get current sample data"""
+    if st.session_state.current_sample_idx >= len(app.study_data):
+        return None
     
-    def save_response(self, sample, responses, best_method, comment, method_mapping):
-        """Save participant response data"""
-        
-        response_data = {
-            'participant_id': st.session_state.participant_id,
-            'fashion_interest': st.session_state.fashion_interest,
-            'sample_number': st.session_state.current_sample + 1,
-            'image_id': sample['image_id'],
-            'category': sample['category'],
-            'introduced_phase': sample['introduced_phase'],
-            'cf_risk': sample['cf_risk'],
-            'method_mapping': method_mapping,  # Which caption letter corresponds to which method
-            'ratings': responses,  # All ratings for all methods
-            'best_caption_method': best_method,
-            'comment': comment,
-            'timestamp': pd.Timestamp.now().isoformat()
-        }
-        
-        st.session_state.responses.append(response_data)
+    sample = app.study_data[st.session_state.current_sample_idx]
+    image_pil = app.get_image_path(sample['image_id'])
     
-    def show_completion_page(self):
-        """Study completion and final questionnaire"""
-        
-        st.markdown('<h1 class="main-header">🎉 Study Complete!</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Thank you for your valuable contribution to AI research!</p>', unsafe_allow_html=True)
-        
-        # Completion summary
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Images Evaluated", len(st.session_state.responses))
-        with col2:
-            st.metric("Captions Rated", len(st.session_state.responses) * 3)
-        with col3:
-            st.metric("Participant ID", st.session_state.participant_id)
-        
-        st.markdown("---")
-        
-        # Final questionnaire
-        st.markdown("### 📋 Final Questions")
-        
-        # Overall observations
+    # Get captions in consistent order
+    methods = sorted(sample['predictions'].keys())
+    captions = [sample['predictions'][method] for method in methods]
+    
+    return {
+        'image': image_pil,
+        'captions': captions,
+        'progress': f"Image {st.session_state.current_sample_idx + 1} of {len(app.study_data)}",
+        'category': sample['category'],
+        'sample_data': sample,
+        'methods': methods
+    }
+
+def show_study_interface():
+    """Show main study interface"""
+
+    st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
+
+    # NEW: Check if we should show category assessment
+    if st.session_state.get("show_category_assessment", False):
+        show_category_transition_assessment(
+            st.session_state.assessment_previous_category,
+            st.session_state.assessment_current_category
+        )
+        return
+
+    current = get_current_sample()
+    if not current:
+        show_completion_page()
+        return
+
+    # Reset sliders only if flagged and BEFORE widgets are rendered
+    if st.session_state.get("slider_reset_needed", False):
+        keys_to_reset = [k for k in st.session_state.keys() if any(k.startswith(p) for p in ("rel_", "flu_", "desc_", "nov_"))]
+        for key in keys_to_reset:
+            st.session_state[key] = 3
+        st.session_state.slider_reset_needed = False
+
+    # Header
+    st.markdown("""
+    <div class="main-header">
+        <h1>📊 Fashion Caption Evaluation</h1>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Progress info
+    st.markdown(f"""
+    <div class="progress-box">
+        <strong>{current['progress']}</strong>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        if current['image']:
+            st.image(current['image'], caption="Fashion Image", width=350)
+        st.markdown(f'<div class="category-badge">{current["category"].upper()}</div>', unsafe_allow_html=True)
+        st.markdown("### 📊 Rating Instructions")
+        st.markdown("""
+        **For each caption, rate on 1–5 scale:**
+
+        - **Relevance**: How accurately does it describe what you see?
+        - **Fluency**: How natural and well-written is the English?
+        - **Descriptiveness**: How detailed and informative is it?
+        - **Novelty**: How creative, interesting, or engaging is it?
+
+        *1 = Very Poor, 5 = Excellent*
+
+        **Then select your favorite caption overall.**
+        """)
+
+    with col2:
+        st.markdown("### 📝 Caption + Ratings")
+
+        caption_letters = ["A", "B", "C"]
+        for i, cap in enumerate(current["captions"]):
+            label = caption_letters[i]
+            st.markdown(f"""
+            <div class="caption-box" style="padding: 1.2rem; margin-bottom: 1rem;">
+                <strong>Caption {label}:</strong> {cap}
+            </div>
+            """, unsafe_allow_html=True)
+
+            with st.container():
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.slider("Relevance", 1, 5, 3, key=f"rel_{label.lower()}_{st.session_state.current_sample_idx}", help="How well it describes the image")
+                    st.slider("Fluency", 1, 5, 3, key=f"flu_{label.lower()}_{st.session_state.current_sample_idx}", help="How natural the caption sounds")
+                with col2:
+                    st.slider("Descriptiveness", 1, 5, 3, key=f"desc_{label.lower()}_{st.session_state.current_sample_idx}", help="How detailed the caption is")
+                    st.slider("Novelty", 1, 5, 3, key=f"nov_{label.lower()}_{st.session_state.current_sample_idx}", help="How creative or interesting it is")
+
+            st.markdown("---")
+
+        best_caption = st.radio(
+            "🏆 Which caption is best overall?",
+            ["Caption A", "Caption B", "Caption C"],
+            index=None,
+            key=f"best_caption_{st.session_state.current_sample_idx}"
+        )
+
+        comment = st.text_area(
+            "💭 Optional comments",
+            placeholder="Any thoughts about these captions or the image?",
+            height=100,
+            key=f"comment_{st.session_state.current_sample_idx}"
+        )
+
+        if st.button("✅ Submit Rating & Continue", type="primary", use_container_width=True):
+            if not best_caption:
+                st.error("❌ Please select which caption is best overall")
+            else:
+                # Gather ratings for all captions
+                rel_a = st.session_state[f"rel_a_{st.session_state.current_sample_idx}"]
+                flu_a = st.session_state[f"flu_a_{st.session_state.current_sample_idx}"]
+                desc_a = st.session_state[f"desc_a_{st.session_state.current_sample_idx}"]
+                nov_a = st.session_state[f"nov_a_{st.session_state.current_sample_idx}"]
+
+                rel_b = st.session_state[f"rel_b_{st.session_state.current_sample_idx}"]
+                flu_b = st.session_state[f"flu_b_{st.session_state.current_sample_idx}"]
+                desc_b = st.session_state[f"desc_b_{st.session_state.current_sample_idx}"]
+                nov_b = st.session_state[f"nov_b_{st.session_state.current_sample_idx}"]
+
+                rel_c = st.session_state[f"rel_c_{st.session_state.current_sample_idx}"]
+                flu_c = st.session_state[f"flu_c_{st.session_state.current_sample_idx}"]
+                desc_c = st.session_state[f"desc_c_{st.session_state.current_sample_idx}"]
+                nov_c = st.session_state[f"nov_c_{st.session_state.current_sample_idx}"]
+
+                submit_rating(current, rel_a, flu_a, desc_a, nov_a,
+                              rel_b, flu_b, desc_b, nov_b,
+                              rel_c, flu_c, desc_c, nov_c,
+                              best_caption, comment)
+                st.rerun()
+
+
+
+def submit_rating(current, rel_a, flu_a, desc_a, nov_a, rel_b, flu_b, desc_b, nov_b,
+                  rel_c, flu_c, desc_c, nov_c, best_caption, comment):
+    """Submit current rating and advance"""
+
+    # Create method mapping
+    caption_labels = ["Caption A", "Caption B", "Caption C"]
+    method_mapping = {caption_labels[i]: current['methods'][i] for i in range(3)}
+    best_method = method_mapping[best_caption]
+
+    # Store response
+    response_data = {
+        'participant_id': st.session_state.participant_id,
+        'fashion_interest': st.session_state.fashion_interest,
+        'sample_number': st.session_state.current_sample_idx + 1,
+        'image_id': current['sample_data']['image_id'],
+        'category': current['sample_data']['category'],
+        'introduced_phase': current['sample_data']['introduced_phase'],
+        'cf_risk': current['sample_data']['cf_risk'],
+        'method_mapping': method_mapping,
+        'ratings': {
+            current['methods'][0]: {'relevance': rel_a, 'fluency': flu_a, 'descriptiveness': desc_a, 'novelty': nov_a},
+            current['methods'][1]: {'relevance': rel_b, 'fluency': flu_b, 'descriptiveness': desc_b, 'novelty': nov_b},
+            current['methods'][2]: {'relevance': rel_c, 'fluency': flu_c, 'descriptiveness': desc_c, 'novelty': nov_c}
+        },
+        'best_caption_method': best_method,
+        'comment': comment,
+        'timestamp': datetime.now().isoformat()
+    }
+
+    st.session_state.responses.append(response_data)
+    st.session_state.current_sample_idx += 1
+
+    # NEW: Check if we need to show category assessment
+    should_assess, prev_cat, curr_cat = should_show_category_assessment()
+    
+    if should_assess:
+        # Set flag to show category assessment instead of normal transition
+        st.session_state.show_category_assessment = True
+        st.session_state.assessment_previous_category = prev_cat
+        st.session_state.assessment_current_category = curr_cat
+    else:
+        # Set normal reset flag
+        st.session_state.slider_reset_needed = True
+        st.session_state.show_transition_banner = True
+
+def show_completion_page():
+    """Show completion questionnaire"""
+    
+    # Header
+    st.markdown("""
+    <div class="main-header">
+        <h1>📋 Final Questionnaire</h1>
+        <h3>Help us understand your experience</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Progress info
+    st.markdown(f"""
+    <div class="progress-box">
+    <strong>Rating Phase Complete!</strong><br>
+    Participant ID: {st.session_state.participant_id} | 
+    Images Evaluated: {len(st.session_state.responses)} | 
+    Total Ratings: {len(st.session_state.responses) * 3}
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Demographics Section
+    st.markdown("### 👤 Demographics")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        age = st.selectbox(
+            "How old are you?",
+            ["", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"],
+            help="Optional demographic information"
+        )
+    
+    with col2:
+        gender = st.selectbox(
+            "What is your gender identity?",
+            ["", "Female", "Male", "Non-binary/Third gender", "Prefer not to disclose"],
+            help="Optional demographic information"
+        )
+    
+    st.markdown("---")
+    
+    # Quality Assessment Section
+    st.markdown("### 📊 Caption Quality Assessment")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
         quality_patterns = st.radio(
-            "Did you notice any patterns in caption quality across different fashion categories?",
-            ["Yes, clear differences between categories", 
-             "Some differences", 
-             "No clear patterns", 
-             "Not sure"],
-            key="quality_patterns"
+            "Did you notice quality differences between fashion categories?",
+            ["Yes, clear differences", "Some differences", "No patterns", "Not sure"],
+            index=None,
+            help="Think about whether certain categories had consistently better or worse captions"
         )
         
-        if quality_patterns in ["Yes, clear differences between categories", "Some differences"]:
+        # Conditional follow-up questions
+        if quality_patterns in ["Yes, clear differences", "Some differences"]:
             better_categories = st.multiselect(
-                "Which fashion categories seemed to have better captions overall?",
+                "Which categories had better captions? (select all that apply)",
                 ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"],
-                key="better_categories"
+                help="Select categories with consistently good captions"
+            )
+            
+            worse_categories = st.multiselect(
+                "Which categories had worse captions? (select all that apply)",
+                ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"],
+                help="Select categories with consistently poor captions"
             )
         else:
             better_categories = []
-        
-        # Caption style preferences
-        caption_preference = st.radio(
-            "What type of fashion captions do you prefer?",
-            ["More detailed and descriptive", 
-             "More creative and interesting", 
-             "More accurate and factual", 
-             "Balanced across all aspects"],
-            key="caption_preference"
-        )
-        
-        # AI system evaluation
-        ai_readiness = st.select_slider(
-            "How ready do you think AI caption systems are for fashion e-commerce?",
-            options=["Not ready", "Somewhat ready", "Moderately ready", "Very ready", "Completely ready"],
-            value="Moderately ready",
-            key="ai_readiness"
-        )
-        
-        # Final feedback
-        final_feedback = st.text_area(
-            "Any final thoughts about AI-generated fashion captions or this study?",
-            placeholder="Optional feedback...",
-            key="final_feedback",
-            height=100
-        )
-        
-        # Complete study
-        if st.button("💾 Complete Study", type="primary", use_container_width=True):
-            self.save_final_data(quality_patterns, better_categories, caption_preference, ai_readiness, final_feedback)
-            self.export_and_thank()
+            worse_categories = []
     
-    def save_final_data(self, quality_patterns, better_categories, caption_preference, ai_readiness, final_feedback):
-        """Save final questionnaire responses"""
+    with col2:
+        learning_hypothesis = st.radio(
+            "Do you think the AI learned some fashion categories better than others?",
+            ["Yes, definitely", "Yes, somewhat", "No", "Not sure"],
+            index=None,
+            help="Based on the caption quality you observed"
+        )
         
+        if learning_hypothesis in ["Yes, definitely", "Yes, somewhat"]:
+            better_learned = st.multiselect(
+                "Which categories do you think the AI learned best?",
+                ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"],
+                help="Categories where AI seemed most competent"
+            )
+        else:
+            better_learned = []
+    
+    # Category Ranking Section
+    st.markdown("### 🏆 Category Quality Ranking")
+    st.markdown("Rank fashion categories by overall caption quality (1 = best, 6 = worst):")
+    
+    categories = ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"]
+    rankings = {}
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        rankings["Accessories"] = st.selectbox("Accessories (bags, jewelry, belts)", [1,2,3,4,5,6], key="rank_accessories")
+        rankings["Bottoms"] = st.selectbox("Bottoms (jeans, skirts, pants)", [1,2,3,4,5,6], key="rank_bottoms")
+    
+    with col2:
+        rankings["Dresses"] = st.selectbox("Dresses (casual, formal, work)", [1,2,3,4,5,6], key="rank_dresses")
+        rankings["Outerwear"] = st.selectbox("Outerwear (jackets, coats, blazers)", [1,2,3,4,5,6], key="rank_outerwear")
+    
+    with col3:
+        rankings["Shoes"] = st.selectbox("Shoes (sneakers, heels, boots)", [1,2,3,4,5,6], key="rank_shoes")
+        rankings["Tops"] = st.selectbox("Tops (shirts, blouses, sweaters)", [1,2,3,4,5,6], key="rank_tops")
+    
+    # Check for duplicate rankings
+    ranking_values = list(rankings.values())
+    if len(set(ranking_values)) != len(ranking_values):
+        st.warning("⚠️ Please ensure each category has a unique ranking (1-6)")
+    
+    st.markdown("---")
+    
+    # User Preferences and AI Assessment
+    st.markdown("### 🎯 Preferences & AI Assessment")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        caption_preference = st.radio(
+            "What type of fashion caption do you prefer?",
+            ["Detailed descriptions", "Creative/engaging language", "Accurate basic facts", "Balanced approach"],
+            index=None,
+            help="Your personal preference for fashion descriptions"
+        )
+        
+        learning_effectiveness = st.radio(
+            "Which learning approach seemed most effective overall?",
+            ["Couldn't distinguish", "Approach A seemed best", "Approach B seemed best", "Approach C seemed best", "All seemed similar"],
+            index=None,
+            help="Based on the quality of captions you saw"
+        )
+    
+    with col2:
+        ai_readiness = st.radio(
+            "How ready is AI for fashion e-commerce applications?",
+            ["Not ready", "Somewhat ready", "Moderately ready", "Very ready", "Completely ready"],
+            index=None,
+            help="Based on the caption quality you experienced"
+        )
+        
+        forgetting_evidence = st.radio(
+            "Did you notice any decrease in quality for categories shown earlier?",
+            ["Yes, clear decrease", "Slight decrease", "No decrease noticed", "Not sure"],
+            index=None,
+            help="Think about whether early categories (accessories, bottoms) seemed worse"
+        )
+    
+    # Additional Comments
+    st.markdown("### 💭 Additional Feedback")
+    final_feedback = st.text_area(
+        "Any final thoughts, observations, or suggestions?",
+        placeholder="Comments about caption quality patterns, AI performance, study experience, or suggestions for improvement...",
+        height=120,
+        help="Your insights are valuable for our research"
+    )
+    
+    # Validation and submission
+    if st.button("💾 Complete Study & Save Results", type="primary", use_container_width=True):
+        # Validate rankings
+        if len(set(ranking_values)) != len(ranking_values):
+            st.error("❌ Please ensure each category has a unique ranking (1-6)")
+        # Validate required radio buttons
+        elif not quality_patterns:
+            st.error("❌ Please indicate if you noticed quality differences between categories")
+        elif not learning_hypothesis:
+            st.error("❌ Please indicate if you think the AI learned some categories better than others")
+        elif not caption_preference:
+            st.error("❌ Please select your caption preference")
+        elif not learning_effectiveness:
+            st.error("❌ Please indicate which learning approach seemed most effective")
+        elif not ai_readiness:
+            st.error("❌ Please rate how ready AI is for fashion e-commerce")
+        elif not forgetting_evidence:
+            st.error("❌ Please indicate if you noticed any quality decrease for earlier categories")
+        else:
+            complete_study(
+                age, gender, quality_patterns, better_categories, worse_categories,
+                learning_hypothesis, better_learned,
+                rankings, caption_preference, learning_effectiveness, ai_readiness,
+                forgetting_evidence, final_feedback
+            )
+
+
+def complete_study(age, gender, quality_patterns, better_categories, worse_categories,
+                  learning_hypothesis, better_learned, rankings, caption_preference,
+                  learning_effectiveness, ai_readiness, forgetting_evidence, final_feedback):
+    """Complete the study and save results"""
+    
+    try:
+        # Add final questionnaire data
         final_data = {
             'participant_id': st.session_state.participant_id,
             'response_type': 'final_questionnaire',
+            # Demographics
+            'age_group': age,
+            'gender': gender,
+            # Quality patterns
             'quality_patterns_noticed': quality_patterns,
-            'better_categories': better_categories,
+            'better_categories': ", ".join(better_categories) if better_categories else "",
+            'worse_categories': ", ".join(worse_categories) if worse_categories else "",
+            # Learning assessment
+            'learning_hypothesis': learning_hypothesis,
+            'better_learned_categories': ", ".join(better_learned) if better_learned else "",
+            # Rankings
+            'accessories_rank': rankings.get("Accessories", ""),
+            'bottoms_rank': rankings.get("Bottoms", ""),
+            'dresses_rank': rankings.get("Dresses", ""),
+            'outerwear_rank': rankings.get("Outerwear", ""),
+            'shoes_rank': rankings.get("Shoes", ""),
+            'tops_rank': rankings.get("Tops", ""),
+            # Preferences and assessment
             'caption_preference': caption_preference,
+            'learning_effectiveness': learning_effectiveness,
             'ai_readiness_rating': ai_readiness,
+            'forgetting_evidence': forgetting_evidence,
             'final_feedback': final_feedback,
-            'completion_timestamp': pd.Timestamp.now().isoformat(),
-            'total_study_time_minutes': 'approximately_20_25'
+            'completion_timestamp': datetime.now().isoformat()
         }
         
-        st.session_state.responses.append(final_data)
-    
-    def export_and_thank(self):
-        """Export data and show thank you message"""
+        # Create dataframe from responses
+        main_responses = st.session_state.responses.copy()
+        df = pd.DataFrame(main_responses)
         
-        try:
-            # Separate main responses from final questionnaire
-            main_responses = [r for r in st.session_state.responses if r.get('response_type') != 'final_questionnaire']
-            final_response = [r for r in st.session_state.responses if r.get('response_type') == 'final_questionnaire'][0]
-            
-            # Create comprehensive dataframe
-            responses_df = pd.DataFrame(main_responses)
-            
-            # Flatten ratings into separate columns
-            for idx, response in enumerate(main_responses):
-                for method, ratings in response['ratings'].items():
-                    for metric, score in ratings.items():
-                        responses_df.loc[idx, f"{method}_{metric}"] = score
-            
-            # Add final questionnaire data to each row
-            for col, value in final_response.items():
-                if col not in ['participant_id', 'response_type']:
-                    responses_df[col] = value
-            
-            # Generate filename
-            filename = f"alcie_responses_{st.session_state.participant_id}.csv"
-            csv_data = responses_df.to_csv(index=False)
-            
-            # Success message
-            st.success("🎉 **Study completed successfully!**")
-            
-            # Download button
-            st.download_button(
-                label="📥 Download Your Responses (CSV)",
-                data=csv_data,
-                file_name=filename,
-                mime="text/csv",
-                use_container_width=True
-            )
-            
-            # Thank you message
-            st.markdown("---")
-            st.markdown("### 🙏 Thank You!")
-            
-            st.markdown("""
-            Your participation helps advance AI research in fashion and computer vision!
-            
-            **What happens next:**
-            - Your anonymous responses will be analyzed with other participants
-            - Results will contribute to research on continual learning and AI captioning
-            - Findings may be published in academic conferences and journals
-            
-            **Questions or concerns?** Contact: akkumar@dfki.de
-            
-            ---
-            
-            **DFKI - German Research Center for Artificial Intelligence**  
-            *Advancing AI for the benefit of society*
-            """)
-            
-            # Reset button for new participant
-            if st.button("🔄 Reset for New Participant"):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.rerun()
-                
-        except Exception as e:
-            st.error(f"❌ Error saving responses: {e}")
-            st.info("Your responses have been recorded in the session. Please contact the researcher.")
-    
-    def run(self):
-        """Main application runner"""
+        # Flatten ratings
+        for idx, response in enumerate(main_responses):
+            for method, ratings in response['ratings'].items():
+                for metric, score in ratings.items():
+                    df.loc[idx, f"{method}_{metric}"] = score
         
-        if not st.session_state.consent_given or not st.session_state.study_started:
-            self.show_welcome_page()
+        # Add final questionnaire data to all rows
+        for col, value in final_data.items():
+            if col != 'participant_id':
+                df[col] = value
+        
+        # NEW: Save category assessments separately
+        if hasattr(st.session_state, 'category_assessments') and st.session_state.category_assessments:
+            category_df = pd.DataFrame(st.session_state.category_assessments)
+            category_filename = f"category_assessments_{st.session_state.participant_id}.csv"
+            category_df.to_csv(category_filename, index=False)
+            
+            # Save to responses directory
+            output_dir = "responses"
+            os.makedirs(output_dir, exist_ok=True)
+            category_output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_category_assessments.csv")
+            category_df.to_csv(category_output_file, index=False)
+        
+        # Save individual CSV
+        filename = f"alcie_responses_{st.session_state.participant_id}.csv"
+        df.to_csv(filename, index=False)
+        
+        # Save to aggregated file
+        aggregate_file = "all_alcie_responses.csv"
+        if os.path.exists(aggregate_file):
+            existing_df = pd.read_csv(aggregate_file)
+            combined_df = pd.concat([existing_df, df], ignore_index=True)
+            combined_df.to_csv(aggregate_file, index=False)
         else:
-            self.show_study_interface()
+            df.to_csv(aggregate_file, index=False)
 
-# Main application entry point
+        # Save to 'responses/' directory
+        output_dir = "responses"
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_responses.csv")
+        df.to_csv(output_file, index=False)
+
+        st.success("✅ Your responses have been saved securely. Thank you for your time!")
+        
+        # Success message
+        category_assessments_count = len(st.session_state.get('category_assessments', []))
+        st.markdown(f"""
+        ## 🎉 Study Completed Successfully!
+        
+        **Your Contribution:**
+        - **Participant ID:** {st.session_state.participant_id}
+        - **Images Evaluated:** {len(main_responses)}
+        - **Captions Rated:** {len(main_responses) * 3}
+        - **Category Assessments:** {category_assessments_count}
+        
+        **Thank you for contributing to AI research!** 🙏
+                
+        ---
+        
+        **🔬 About Your Data:**
+        - All responses are anonymous and secure
+        - Data will be used for academic research only
+        - Results may be published in scientific conferences/journals
+        - No personal information is stored or shared
+        """)
+        
+        st.session_state.study_complete = True
+        
+    except Exception as e:
+        st.error(f"❌ Error saving results: {str(e)}")
+
+def show_transition_message(message="Loading next image..."):
+    # NEW: Check if this is a category transition
+    banner_value = st.session_state.get("show_transition_banner", "")
+    if isinstance(banner_value, str) and banner_value.startswith("category_transition_"):
+        category = banner_value.split("_")[-1]
+        message = f"Starting {category} category..."
+    
+    st.markdown(f"""
+    <div class="success-message">
+        <h4>✅ Response Saved!</h4>
+        <p>{message}</p>
+    </div>
+
+    <a id="scroll-top"></a>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <script>
+    function scrollAndTriggerRerun() {
+        document.querySelector('#scroll-top').scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => {
+            window.parent.postMessage({ type: 'SCROLL_DONE' }, '*');
+        }, 500);
+    }
+    scrollAndTriggerRerun();
+    </script>
+    """, unsafe_allow_html=True)
+
+    from streamlit_js_eval import streamlit_js_eval
+    trigger = streamlit_js_eval(js_expressions="window.scrollY", key="scroll_trigger_top")
+    if isinstance(trigger, int) and trigger <= 10:
+        time.sleep(0.5)
+        st.session_state.show_transition_banner = False
+        st.rerun()
+
+
+# Main app logic
 def main():
-    """Initialize and run the ALCIE study app"""
-    app = ALCIEStudyApp()
-    app.run()
+    """Main application"""
+    st.markdown('<a id="scroll-top"></a>', unsafe_allow_html=True)
+
+    print("Banner flag:", st.session_state.get("show_transition_banner"))
+
+
+    if not st.session_state.study_started:
+        show_welcome_page()
+    elif st.session_state.get("study_complete", False):
+        st.success("Study completed! Thank you for your participation.")
+    elif st.session_state.get("show_transition_banner", False):
+        if st.session_state.show_transition_banner == "start_study":
+            show_transition_message("Starting study...")
+        else:
+            show_transition_message()
+    else:
+        show_study_interface()
+
 
 if __name__ == "__main__":
     main()
