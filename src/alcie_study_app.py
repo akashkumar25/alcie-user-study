@@ -69,6 +69,64 @@ st.markdown("""
     .success-message h4 {
         color: #065F46 !important;
     }
+    /* Selectbox/Dropdown styling - white text on dark background */
+    .stSelectbox > div > div {
+        background: #2E3440 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #4C566A !important;
+    }
+
+    .stSelectbox [data-baseweb="select"] {
+        background: #2E3440 !important;
+        color: #FFFFFF !important;
+    }
+
+    .stSelectbox [data-baseweb="select"] > div {
+        background: #2E3440 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #4C566A !important;
+    }
+
+    .stSelectbox [role="listbox"] {
+        background: #2E3440 !important;
+        border: 1px solid #4C566A !important;
+    }
+
+    .stSelectbox [role="option"] {
+        background: #2E3440 !important;
+        color: #FFFFFF !important;
+    }
+
+    .stSelectbox [role="option"]:hover {
+        background: #3B4252 !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Multiselect styling - white text */
+    .stMultiSelect > div > div {
+        background: #2E3440 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #4C566A !important;
+    }
+
+    .stMultiSelect [data-baseweb="select"] {
+        background: #2E3440 !important;
+        color: #FFFFFF !important;
+    }
+
+    .stMultiSelect [role="listbox"] {
+        background: #2E3440 !important;
+    }
+
+    .stMultiSelect [role="option"] {
+        background: #2E3440 !important;
+        color: #FFFFFF !important;
+    }
+
+    .stMultiSelect [role="option"]:hover {
+        background: #3B4252 !important;
+        color: #FFFFFF !important;
+    }
     
     .main-header {
         background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
@@ -504,6 +562,7 @@ def show_welcome_page():
         ### 📞 Contact & Institution
         
         **Researcher:** Akash Kumar (akash.kumar@dfki.de)  
+        **Supervisor:** Aliki Anagnostopoulou (aliki.anagnostopoulou@dfki.de)  
         **Institution:** DFKI - German Research Center for Artificial Intelligence  
         **Website:** www.dfki.de
         
@@ -872,19 +931,15 @@ def show_completion_page():
             help="Your personal preference for fashion descriptions"
         )
         
-        learning_effectiveness = st.radio(
-            "Which learning approach seemed most effective overall?",
-            ["Couldn't distinguish", "Approach A seemed best", "Approach B seemed best", "Approach C seemed best", "All seemed similar"],
-            index=None,
-            help="Based on the quality of captions you saw"
-        )
     
     with col2:
-        ai_readiness = st.radio(
-            "How ready is AI for fashion e-commerce applications?",
-            ["Not ready", "Somewhat ready", "Moderately ready", "Very ready", "Completely ready"],
+        summary_assessment = st.radio(
+            "How well do you think the AI learned to describe diverse fashion items?",
+            ["Excellent - handled all types well", "Good - handled most types well", 
+            "Fair - struggled with some types", "Poor - struggled with many types", 
+            "Very poor - couldn't handle most types"],
             index=None,
-            help="Based on the caption quality you experienced"
+            help="Your overall impression of the AI's learning across different fashion categories"
         )
         
         forgetting_evidence = st.radio(
@@ -915,9 +970,7 @@ def show_completion_page():
             st.error("❌ Please indicate if you think the AI learned some categories better than others")
         elif not caption_preference:
             st.error("❌ Please select your caption preference")
-        elif not learning_effectiveness:
-            st.error("❌ Please indicate which learning approach seemed most effective")
-        elif not ai_readiness:
+        elif not summary_assessment:
             st.error("❌ Please rate how ready AI is for fashion e-commerce")
         elif not forgetting_evidence:
             st.error("❌ Please indicate if you noticed any quality decrease for earlier categories")
@@ -925,14 +978,14 @@ def show_completion_page():
             complete_study(
                 age, gender, quality_patterns, better_categories, worse_categories,
                 learning_hypothesis, better_learned,
-                rankings, caption_preference, learning_effectiveness, ai_readiness,
+                rankings, caption_preference, summary_assessment,
                 forgetting_evidence, final_feedback
             )
 
 
 def complete_study(age, gender, quality_patterns, better_categories, worse_categories,
                   learning_hypothesis, better_learned, rankings, caption_preference,
-                  learning_effectiveness, ai_readiness, forgetting_evidence, final_feedback):
+                  summary_assessment, forgetting_evidence, final_feedback):
     """Complete the study and save results"""
     
     try:
@@ -959,8 +1012,7 @@ def complete_study(age, gender, quality_patterns, better_categories, worse_categ
             'tops_rank': rankings.get("Tops", ""),
             # Preferences and assessment
             'caption_preference': caption_preference,
-            'learning_effectiveness': learning_effectiveness,
-            'ai_readiness_rating': ai_readiness,
+            'summary_assessment_rating': summary_assessment,
             'forgetting_evidence': forgetting_evidence,
             'final_feedback': final_feedback,
             'completion_timestamp': datetime.now().isoformat()
