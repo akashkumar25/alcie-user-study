@@ -49,7 +49,6 @@ def save_response_to_sheet(row_data, worksheet_name="MainResponses"):
     except Exception as e:
         st.warning(f"❗ Could not save to Google Sheet ({worksheet_name}): {e}")
     
-# Custom CSS for modern design
 st.markdown("""
 <style>
 /* Root Variables */
@@ -147,7 +146,7 @@ body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
 
 /* Dropdown / Selectbox / Multiselect */
 .stSelectbox, .stMultiSelect {
-    color: var(--text-primary) !important;
+    color: #212529 !important;
 }
 
 .stSelectbox > div > div, 
@@ -159,25 +158,37 @@ body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
     border: 1px solid #DEE2E6 !important;
 }
 
+/* Fix inner input text visibility */
+.stSelectbox input, .stMultiSelect input {
+    background-color: #F8F9FA !important;
+    color: #212529 !important;
+}
+
+/* Dropdown Options (Popover) */
 [data-baseweb="popover"],
-[data-baseweb="select"],
 [data-baseweb="popover"] ul,
 [data-baseweb="popover"] li,
 [data-baseweb="popover"] li:hover,
 [data-baseweb="option"],
-[data-baseweb="option"]:hover,
-[data-baseweb="tag"] {
+[data-baseweb="option"]:hover {
     background-color: #F8F9FA !important;
     color: #212529 !important;
     border: none !important;
 }
 
-/* Hide Streamlit Elements */
+/* Tags (selected items) */
+[data-baseweb="tag"] {
+    background-color: #DEE2E6 !important;
+    color: #212529 !important;
+}
+
+/* Hide Streamlit UI Elements */
 #MainMenu, footer, header, .stDeployButton {
     visibility: hidden;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
