@@ -37,22 +37,24 @@ st.markdown("""
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-/* Default (Light Theme) */
-html:not([data-theme="dark"]) {
-    --text-primary: #1F2937;
-    --text-secondary: #6B7280;
-    --bg-primary: #FFFFFF;
-    --bg-secondary: #F9FAFB;
-    --border-color: #E5E7EB;
+@media (prefers-color-scheme: light) {
+    :root {
+        --text-primary: #1F2937;
+        --text-secondary: #6B7280;
+        --bg-primary: #FFFFFF;
+        --bg-secondary: #F9FAFB;
+        --border-color: #E5E7EB;
+    }
 }
 
-/* Dark Theme Overrides */
-html[data-theme="dark"] {
-    --text-primary: #ECEFF4;
-    --text-secondary: #D8DEE9;
-    --bg-primary: #2E3440;
-    --bg-secondary: #3B4252;
-    --border-color: #4C566A;
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text-primary: #ECEFF4;
+        --text-secondary: #D8DEE9;
+        --bg-primary: #2E3440;
+        --bg-secondary: #3B4252;
+        --border-color: #4C566A;
+    }
 }
 
 /* Global Text Styling */
