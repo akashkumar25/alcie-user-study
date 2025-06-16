@@ -370,7 +370,7 @@ def save_response_to_sheet_with_proper_headers(row_data, worksheet_name="MainRes
         return False
 
 def save_category_assessments_to_sheets():
-    """Save all category assessments to Google Sheets - BATCH OPTIMIZED"""
+    """Save all category assessments to Google Sheets - BATCH OPTIMIZED with HEADERS"""
     if not hasattr(st.session_state, 'category_assessments') or not st.session_state.category_assessments:
         return True
     
@@ -386,13 +386,18 @@ def save_category_assessments_to_sheets():
             sheet = client.create("ALCIE User Study Responses")
             sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
         
-        # Get or create worksheet
+        # Get or create worksheet WITH HEADERS
         try:
             worksheet = sheet.worksheet("CategoryAssessments")
         except gspread.WorksheetNotFound:
             worksheet = sheet.add_worksheet(title="CategoryAssessments", rows=1000, cols=15)
-            headers = get_category_assessments_headers()
-            worksheet.update('A1:K1', [headers])  # Batch header update
+            # CREATE HEADERS - this was missing!
+            headers = [
+                'participant_id', 'response_type', 'previous_category', 'current_category',
+                'sample_idx_at_transition', 'quality_rating', 'quality_drop',
+                'consistency_rating', 'expectations_rating', 'comments', 'timestamp'
+            ]
+            worksheet.update('A1:K1', [headers])  # Batch header creation
         
         # BATCH: Prepare all assessment rows at once
         all_rows = []
@@ -412,9 +417,9 @@ def save_category_assessments_to_sheets():
             ]
             all_rows.append(row_data)
         
-        # BATCH: Single write for all assessments (instead of loop)
+        # BATCH: Single write for all assessments
         if all_rows:
-            worksheet.append_rows(all_rows)  # 1 API call instead of 6!
+            worksheet.append_rows(all_rows)
         
         return True
         
@@ -460,7 +465,7 @@ def save_main_responses_to_sheets(final_data):
         return False
 
 def save_detailed_responses_to_sheets_batch():
-    """Save all detailed responses in batch mode - NEW FUNCTION"""
+    """Save all detailed responses in batch mode - WITH PROPER HEADERS"""
     try:
         client = get_gsheet_connection()
         if not client:
@@ -473,13 +478,22 @@ def save_detailed_responses_to_sheets_batch():
             sheet = client.create("ALCIE User Study Responses")
             sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
         
-        # Get or create worksheet
+        # Get or create worksheet WITH HEADERS
         try:
             worksheet = sheet.worksheet("DetailedResponses")
         except gspread.WorksheetNotFound:
-            worksheet = sheet.add_worksheet(title="DetailedResponses", rows=2000, cols=25)
-            headers = get_detailed_responses_headers()
-            worksheet.update('A1:Y1', [headers])  # Batch header update
+            worksheet = sheet.add_worksheet(title="DetailedResponses", rows=2000, cols=30)
+            # CREATE HEADERS - this was missing!
+            headers = [
+                'participant_id', 'sample_number', 'image_id', 'category', 'introduced_phase',
+                'cf_risk', 'assigned_phase', 'model_checkpoint', 'diversity_score', 'is_diverse',
+                'method_caption_a', 'method_caption_b', 'method_caption_c',
+                'best_caption_method', 'comment', 'timestamp',
+                'random_relevance', 'random_fluency', 'random_descriptiveness', 'random_novelty',
+                'diversity_relevance', 'diversity_fluency', 'diversity_descriptiveness', 'diversity_novelty',
+                'uncertainty_relevance', 'uncertainty_fluency', 'uncertainty_descriptiveness', 'uncertainty_novelty'
+            ]
+            worksheet.update('A1:AB1', [headers])  # Batch header creation
         
         # BATCH: Prepare all detailed rows at once
         all_rows = []
@@ -506,7 +520,7 @@ def save_detailed_responses_to_sheets_batch():
                 response['timestamp']
             ]
             
-            # Add rating data for each method
+            # Add rating data for each method in consistent order
             for method in actual_methods:
                 if method in response['ratings']:
                     ratings = response['ratings'][method]
@@ -521,14 +535,76 @@ def save_detailed_responses_to_sheets_batch():
             
             all_rows.append(row)
         
-        # BATCH: Single write for all detailed responses (instead of 24 individual writes)
+        # BATCH: Single write for all detailed responses
         if all_rows:
-            worksheet.append_rows(all_rows)  # 1 API call instead of 24!
+            worksheet.append_rows(all_rows)
         
         return True
         
     except Exception as e:
         st.error(f"❌ Error saving detailed responses: {e}")
+        return False
+
+def save_participant_summary_to_sheets_batch(final_data):
+    """Save participant summary with proper headers - ENHANCED"""
+    try:
+        client = get_gsheet_connection()
+        if not client:
+            return False
+            
+        # Try to open existing spreadsheet
+        try:
+            sheet = client.open("ALCIE User Study Responses")
+        except gspread.SpreadsheetNotFound:
+            sheet = client.create("ALCIE User Study Responses")
+            sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
+        
+        # Get or create worksheet WITH HEADERS
+        try:
+            worksheet = sheet.worksheet("ParticipantSummary")
+        except gspread.WorksheetNotFound:
+            worksheet = sheet.add_worksheet(title="ParticipantSummary", rows=1000, cols=25)
+            # CREATE HEADERS
+            headers = [
+                'participant_id', 'fashion_interest', 'age_group', 'gender', 'total_samples',
+                'completion_timestamp', 'quality_patterns_noticed', 'better_categories',
+                'worse_categories', 'learning_hypothesis', 'better_learned_categories',
+                'accessories_rank', 'bottoms_rank', 'dresses_rank', 'outerwear_rank',
+                'shoes_rank', 'tops_rank', 'caption_preference', 'summary_assessment_rating',
+                'forgetting_evidence', 'final_feedback'
+            ]
+            worksheet.update('A1:U1', [headers])  # Batch header creation
+        
+        # Single summary row
+        row = [
+            st.session_state.participant_id,
+            st.session_state.fashion_interest,
+            final_data.get('age_group', ''),
+            final_data.get('gender', ''),
+            len(st.session_state.responses),
+            final_data.get('completion_timestamp', ''),
+            final_data.get('quality_patterns_noticed', ''),
+            final_data.get('better_categories', ''),
+            final_data.get('worse_categories', ''),
+            final_data.get('learning_hypothesis', ''),
+            final_data.get('better_learned_categories', ''),
+            final_data.get('accessories_rank', ''),
+            final_data.get('bottoms_rank', ''),
+            final_data.get('dresses_rank', ''),
+            final_data.get('outerwear_rank', ''),
+            final_data.get('shoes_rank', ''),
+            final_data.get('tops_rank', ''),
+            final_data.get('caption_preference', ''),
+            final_data.get('summary_assessment_rating', ''),
+            final_data.get('forgetting_evidence', ''),
+            final_data.get('final_feedback', '')
+        ]
+        
+        worksheet.append_row(row)
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Error saving participant summary: {e}")
         return False
 
 # ======================== ENHANCED CSV SAVING FUNCTIONS ========================
@@ -1771,7 +1847,7 @@ def complete_study_with_processing_indicators(age, gender, quality_patterns, bet
         except Exception as e:
             notification_msg = f"Notification failed: {e}"
         
-        # Step 7: Save to Google Sheets (BATCH OPTIMIZED)
+        # Step 7: Save to Google Sheets (BATCH OPTIMIZED with PROPER HEADERS)
         with progress_placeholder:
             show_progress_bar(7, 7, "Finalizing submission")
         
@@ -1779,21 +1855,27 @@ def complete_study_with_processing_indicators(age, gender, quality_patterns, bet
         enhanced_sheets_success = False
         try:
             # Save participant summary (1 API call)
-            summary_row = list(participant_summary.values())
-            summary_success = save_response_to_sheet_with_proper_headers(summary_row, "ParticipantSummary")
+            summary_success = save_participant_summary_to_sheets_batch(final_data)
             
             # Save detailed responses in batch (1 API call instead of 24!)
             detailed_success = save_detailed_responses_to_sheets_batch()
             
             enhanced_sheets_success = (summary_success and detailed_success)
             
+            if enhanced_sheets_success:
+                st.success("✅ Enhanced sheets saved with proper headers!")
+            else:
+                st.warning("⚠️ Some enhanced sheets operations failed")
+            
         except Exception as e:
             st.error(f"❌ Enhanced Google Sheets save failed: {e}")
         
-        # Save category assessments
+        # Save category assessments (batch optimized with headers)
         category_sheets_success = False
         try:
             category_sheets_success = save_category_assessments_to_sheets()
+            if category_sheets_success:
+                st.success("✅ Category assessments saved with headers!")
         except Exception as e:
             st.error(f"❌ Category assessments save failed: {e}")
         
