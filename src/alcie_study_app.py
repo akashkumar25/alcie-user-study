@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ALCIE User Study - Complete Streamlit Version
-Enhanced UI with automatic data collection and between-category assessments
+ALCIE User Study - Complete Streamlit Version with All Improvements
+Enhanced UI with automatic data collection, between-category assessments, and robust CSV/Sheets saving
 Run with: streamlit run alcie_study_streamlit.py
 """
 
@@ -23,9 +23,83 @@ import os
 from datetime import datetime
 from PIL import Image
 import time
-import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+
+# ======================== IMPROVED GOOGLE SHEETS FUNCTIONS ========================
+
+def get_main_responses_headers():
+    """Generate headers that match the actual data structure"""
+    base_headers = [
+        'participant_id', 'fashion_interest', 'total_samples', 'all_image_ids', 
+        'all_categories', 'response_type', 'age_group', 'gender',
+        'quality_patterns_noticed', 'better_categories', 'worse_categories',
+        'learning_hypothesis', 'better_learned_categories', 'accessories_rank',
+        'bottoms_rank', 'dresses_rank', 'outerwear_rank', 'shoes_rank', 
+        'tops_rank', 'caption_preference', 'summary_assessment_rating',
+        'forgetting_evidence', 'final_feedback', 'completion_timestamp'
+    ]
+    return base_headers
+
+def get_detailed_responses_headers():
+    """Generate headers for detailed per-response data with method ratings"""
+    base_headers = [
+        'participant_id', 'fashion_interest', 'sample_number', 'image_id', 
+        'category', 'introduced_phase', 'cf_risk', 'best_caption_method', 
+        'comment', 'timestamp'
+    ]
+    
+    # Add method mapping headers
+    method_headers = ['method_caption_a', 'method_caption_b', 'method_caption_c']
+    
+    # Add rating headers for each method (dynamically generated based on actual methods)
+    rating_headers = []
+    example_methods = ['method1', 'method2', 'method3']  # Will be replaced with actual method names
+    for method in example_methods:
+        rating_headers.extend([
+            f'{method}_relevance',
+            f'{method}_fluency', 
+            f'{method}_descriptiveness',
+            f'{method}_novelty'
+        ])
+    
+    # Add final questionnaire headers
+    final_headers = [
+        'response_type', 'age_group', 'gender', 'quality_patterns_noticed', 
+        'better_categories', 'worse_categories', 'learning_hypothesis', 
+        'better_learned_categories', 'accessories_rank', 'bottoms_rank', 
+        'dresses_rank', 'outerwear_rank', 'shoes_rank', 'tops_rank', 
+        'caption_preference', 'summary_assessment_rating', 'forgetting_evidence', 
+        'final_feedback', 'completion_timestamp'
+    ]
+    
+    return base_headers + method_headers + rating_headers + final_headers
+
+def get_category_assessments_headers():
+    """Headers for category assessments"""
+    return [
+        'participant_id', 'response_type', 'previous_category', 'current_category',
+        'sample_idx_at_transition', 'quality_rating', 'quality_drop',
+        'consistency_rating', 'expectations_rating', 'comments', 'timestamp'
+    ]
+
+def ensure_headers_exist(worksheet, headers):
+    """Ensure headers exist and match expected structure"""
+    try:
+        # Get existing headers (first row)
+        existing_headers = worksheet.row_values(1) if worksheet.row_count > 0 else []
+        
+        # If no headers or headers don't match, update them
+        if not existing_headers or existing_headers != headers:
+            if existing_headers:
+                # Clear first row and insert new headers
+                worksheet.delete_rows(1, 1)
+            worksheet.insert_row(headers, 1)
+            return True
+        return False
+    except Exception as e:
+        st.warning(f"Could not ensure headers: {e}")
+        return False
 
 def get_gsheet_connection():
     """Get Google Sheets connection with proper error handling"""
@@ -33,7 +107,6 @@ def get_gsheet_connection():
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         
         # Use the correct secret key that matches your secrets.toml
-        # Based on your code, it should be "gcp_service_account"
         creds = ServiceAccountCredentials.from_json_keyfile_dict(
             st.secrets["gcp_service_account"], scope
         )
@@ -46,8 +119,8 @@ def get_gsheet_connection():
         st.error(f"❌ Failed to connect to Google Sheets: {e}")
         return None
 
-def save_response_to_sheet(row_data, worksheet_name="MainResponses"):
-    """Save single row to Google Sheets"""
+def save_response_to_sheet_with_proper_headers(row_data, worksheet_name="MainResponses"):
+    """Save single row to Google Sheets with proper header management"""
     try:
         client = get_gsheet_connection()
         if not client:
@@ -58,7 +131,6 @@ def save_response_to_sheet(row_data, worksheet_name="MainResponses"):
             sheet = client.open("ALCIE User Study Responses")
         except gspread.SpreadsheetNotFound:
             sheet = client.create("ALCIE User Study Responses")
-            # Share with your email (replace with actual email)
             sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
         
         # Get or create worksheet
@@ -66,30 +138,19 @@ def save_response_to_sheet(row_data, worksheet_name="MainResponses"):
             worksheet = sheet.worksheet(worksheet_name)
         except gspread.WorksheetNotFound:
             worksheet = sheet.add_worksheet(title=worksheet_name, rows=1000, cols=50)
-            
-            # Add headers for the new worksheet
-            if worksheet_name == "MainResponses":
-                headers = [
-                    'participant_id', 'fashion_interest', 'sample_number', 'image_id', 
-                    'category', 'introduced_phase', 'cf_risk', 'best_caption_method', 
-                    'comment', 'timestamp', 'response_type', 'age_group', 'gender',
-                    'quality_patterns_noticed', 'better_categories', 'worse_categories',
-                    'learning_hypothesis', 'better_learned_categories', 'accessories_rank',
-                    'bottoms_rank', 'dresses_rank', 'outerwear_rank', 'shoes_rank', 
-                    'tops_rank', 'caption_preference', 'summary_assessment_rating',
-                    'forgetting_evidence', 'final_feedback', 'completion_timestamp'
-                ]
-            elif worksheet_name == "CategoryAssessments":
-                headers = [
-                    'participant_id', 'response_type', 'previous_category', 'current_category',
-                    'sample_idx_at_transition', 'quality_rating', 'quality_drop',
-                    'consistency_rating', 'expectations_rating', 'comments', 'timestamp'
-                ]
-            else:
-                headers = []
-            
-            if headers:
-                worksheet.insert_row(headers, 1)
+        
+        # Ensure proper headers based on worksheet type
+        if worksheet_name == "MainResponses":
+            headers = get_main_responses_headers()
+        elif worksheet_name == "DetailedResponses":
+            headers = get_detailed_responses_headers()
+        elif worksheet_name == "CategoryAssessments":
+            headers = get_category_assessments_headers()
+        else:
+            headers = []
+        
+        if headers:
+            ensure_headers_exist(worksheet, headers)
         
         # Convert row_data to list of strings
         if isinstance(row_data, (list, tuple)):
@@ -127,56 +188,189 @@ def save_category_assessments_to_sheets():
                 assessment['timestamp']
             ]
             
-            if save_response_to_sheet(row_data, worksheet_name="CategoryAssessments"):
+            if save_response_to_sheet_with_proper_headers(row_data, worksheet_name="CategoryAssessments"):
                 success_count += 1
         
-        st.info(f"✅ Saved {success_count}/{len(st.session_state.category_assessments)} category assessments to Google Sheets")
         return success_count > 0
         
     except Exception as e:
         st.error(f"❌ Error saving category assessments: {e}")
         return False
 
-def save_main_responses_to_sheets(df):
-    """Save main responses to Google Sheets (one row per participant)"""
+def save_main_responses_to_sheets_fixed(final_data):
+    """Save summary participant data to Google Sheets with proper headers"""
     try:
-        # Get first row (all rows have same participant data due to duplication in complete_study)
-        first_row = df.iloc[0]
-        
-        # Create row data with all the flattened information
+        # Create summary row data (one row per participant)
         row_data = [
-            first_row.get('participant_id', ''),
-            first_row.get('fashion_interest', ''),
+            st.session_state.participant_id,
+            st.session_state.fashion_interest,
             len(st.session_state.responses),  # total samples
-            ', '.join([str(r['image_id']) for r in st.session_state.responses]),  # all image IDs
-            ', '.join([str(r['category']) for r in st.session_state.responses]),  # all categories
-            first_row.get('response_type', ''),
-            first_row.get('age_group', ''),
-            first_row.get('gender', ''),
-            first_row.get('quality_patterns_noticed', ''),
-            first_row.get('better_categories', ''),
-            first_row.get('worse_categories', ''),
-            first_row.get('learning_hypothesis', ''),
-            first_row.get('better_learned_categories', ''),
-            first_row.get('accessories_rank', ''),
-            first_row.get('bottoms_rank', ''),
-            first_row.get('dresses_rank', ''),
-            first_row.get('outerwear_rank', ''),
-            first_row.get('shoes_rank', ''),
-            first_row.get('tops_rank', ''),
-            first_row.get('caption_preference', ''),
-            first_row.get('summary_assessment_rating', ''),
-            first_row.get('forgetting_evidence', ''),
-            first_row.get('final_feedback', ''),
-            first_row.get('completion_timestamp', '')
+            ', '.join([str(r['image_id']) for r in st.session_state.responses]),
+            ', '.join([str(r['category']) for r in st.session_state.responses]),
+            final_data.get('response_type', ''),
+            final_data.get('age_group', ''),
+            final_data.get('gender', ''),
+            final_data.get('quality_patterns_noticed', ''),
+            final_data.get('better_categories', ''),
+            final_data.get('worse_categories', ''),
+            final_data.get('learning_hypothesis', ''),
+            final_data.get('better_learned_categories', ''),
+            final_data.get('accessories_rank', ''),
+            final_data.get('bottoms_rank', ''),
+            final_data.get('dresses_rank', ''),
+            final_data.get('outerwear_rank', ''),
+            final_data.get('shoes_rank', ''),
+            final_data.get('tops_rank', ''),
+            final_data.get('caption_preference', ''),
+            final_data.get('summary_assessment_rating', ''),
+            final_data.get('forgetting_evidence', ''),
+            final_data.get('final_feedback', ''),
+            final_data.get('completion_timestamp', '')
         ]
         
-        return save_response_to_sheet(row_data, worksheet_name="MainResponses")
+        return save_response_to_sheet_with_proper_headers(row_data, worksheet_name="MainResponses")
         
     except Exception as e:
         st.error(f"❌ Error saving main responses: {e}")
         return False
-    
+
+# ======================== ENHANCED CSV SAVING FUNCTIONS ========================
+
+def save_progress_to_csv():
+    """Save current progress to CSV (called after each response)"""
+    try:
+        if not st.session_state.responses:
+            return
+            
+        output_dir = "responses"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Create progress file
+        progress_file = os.path.join(output_dir, f"{st.session_state.participant_id}_progress.csv")
+        
+        # Convert responses to DataFrame with proper flattening
+        rows = []
+        for response in st.session_state.responses:
+            # Base row data
+            row = {
+                'participant_id': response['participant_id'],
+                'fashion_interest': response['fashion_interest'],
+                'sample_number': response['sample_number'],
+                'image_id': response['image_id'],
+                'category': response['category'],
+                'introduced_phase': response['introduced_phase'],
+                'cf_risk': response['cf_risk'],
+                'best_caption_method': response['best_caption_method'],
+                'comment': response['comment'],
+                'timestamp': response['timestamp']
+            }
+            
+            # Flatten method mapping
+            for caption_label, method in response['method_mapping'].items():
+                row[f'method_{caption_label.lower().replace(" ", "_")}'] = method
+            
+            # Flatten ratings
+            for method, ratings in response['ratings'].items():
+                for metric, score in ratings.items():
+                    row[f'{method}_{metric}'] = score
+            
+            rows.append(row)
+        
+        # Save to CSV
+        df = pd.DataFrame(rows)
+        df.to_csv(progress_file, index=False)
+        
+        # Also save category assessments if they exist
+        if hasattr(st.session_state, 'category_assessments') and st.session_state.category_assessments:
+            category_progress_file = os.path.join(output_dir, f"{st.session_state.participant_id}_category_progress.csv")
+            category_df = pd.DataFrame(st.session_state.category_assessments)
+            category_df.to_csv(category_progress_file, index=False)
+            
+        return True
+        
+    except Exception as e:
+        st.warning(f"Could not save progress to CSV: {e}")
+        return False
+
+def save_final_complete_csv(final_data):
+    """Save complete final CSV with all data properly structured"""
+    try:
+        output_dir = "responses"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Main responses with final questionnaire data
+        main_rows = []
+        for response in st.session_state.responses:
+            row = {
+                # Response data
+                'participant_id': response['participant_id'],
+                'fashion_interest': response['fashion_interest'],
+                'sample_number': response['sample_number'],
+                'image_id': response['image_id'],
+                'category': response['category'],
+                'introduced_phase': response['introduced_phase'],
+                'cf_risk': response['cf_risk'],
+                'best_caption_method': response['best_caption_method'],
+                'comment': response['comment'],
+                'timestamp': response['timestamp'],
+                
+                # Final questionnaire data (same for all rows)
+                **final_data
+            }
+            
+            # Flatten method mapping
+            for caption_label, method in response['method_mapping'].items():
+                row[f'method_{caption_label.lower().replace(" ", "_")}'] = method
+            
+            # Flatten ratings
+            for method, ratings in response['ratings'].items():
+                for metric, score in ratings.items():
+                    row[f'{method}_{metric}'] = score
+            
+            main_rows.append(row)
+        
+        # Save main responses
+        main_df = pd.DataFrame(main_rows)
+        final_file = os.path.join(output_dir, f"{st.session_state.participant_id}_complete.csv")
+        main_df.to_csv(final_file, index=False)
+        
+        # Save category assessments
+        category_final_file = None
+        if hasattr(st.session_state, 'category_assessments') and st.session_state.category_assessments:
+            category_df = pd.DataFrame(st.session_state.category_assessments)
+            category_final_file = os.path.join(output_dir, f"{st.session_state.participant_id}_category_assessments_final.csv")
+            category_df.to_csv(category_final_file, index=False)
+        
+        # Create summary file with participant overview
+        summary_data = {
+            'participant_id': st.session_state.participant_id,
+            'total_responses': len(st.session_state.responses),
+            'total_category_assessments': len(st.session_state.get('category_assessments', [])),
+            'completion_status': 'complete',
+            'start_time': st.session_state.responses[0]['timestamp'] if st.session_state.responses else '',
+            'end_time': final_data['completion_timestamp'],
+            **{k: v for k, v in final_data.items() if k not in ['participant_id', 'response_type']}
+        }
+        
+        summary_df = pd.DataFrame([summary_data])
+        summary_file = os.path.join(output_dir, f"{st.session_state.participant_id}_summary.csv")
+        summary_df.to_csv(summary_file, index=False)
+        
+        return True, final_file, category_final_file, summary_file
+        
+    except Exception as e:
+        st.error(f"Error saving final CSV: {e}")
+        return False, None, None, None
+
+# ======================== PROCESSING INDICATORS ========================
+
+def show_progress_bar(steps_total, current_step, step_description):
+    """Show progress bar with step description"""
+    progress = current_step / steps_total
+    st.progress(progress, text=f"Step {current_step}/{steps_total}: {step_description}")
+
+# ======================== EXISTING STREAMLIT UI CODE ========================
+
 st.markdown("""
 <style>
 /* Root Variables */
@@ -317,10 +511,6 @@ body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
 </style>
 """, unsafe_allow_html=True)
 
-
-
-
-
 class ALCIEStreamlitApp:
     def __init__(self):
         self.study_dataset_file = "data/alcie_study_dataset.json"
@@ -333,7 +523,7 @@ class ALCIEStreamlitApp:
             with open(self.study_dataset_file, 'r') as f:
                 data = json.load(f)
             self.study_data = data['samples'].copy()
-            # random.shuffle(self.study_data)
+            # Sort by category and phase instead of random shuffle
             self.study_data = sorted(
                 data["samples"],
                 key=lambda x: (x["category"], x["assigned_phase"])
@@ -368,20 +558,24 @@ def init_session_state():
         st.session_state.study_started = False
         st.session_state.current_sample_idx = 0
         st.session_state.responses = []
-        st.session_state.participant_id = f"P{random.randint(1000, 9999)}"
+        timestamp_ms = int(time.time() * 1000)
+        random_suffix = random.randint(100, 999)
+        st.session_state.participant_id = f"P{timestamp_ms}{random_suffix}"
         st.session_state.fashion_interest = None
         st.session_state.consent_given = False
         st.session_state.study_complete = False
+        st.session_state.processing_completion = False
 
 init_session_state()
 
-# NEW: Helper functions for category assessment
+# ======================== CATEGORY ASSESSMENT FUNCTIONS ========================
+
 def should_show_category_assessment():
     """Determine if we should show category assessment"""
     if st.session_state.current_sample_idx == 0:
         return False, None, None
     
-    # NEW: Check if we've just finished the study (last category assessment)
+    # Check if we've just finished the study (last category assessment)
     if st.session_state.current_sample_idx >= len(app.study_data):
         # Get the last sample's category for final assessment
         last_sample = app.study_data[st.session_state.current_sample_idx - 1]
@@ -421,7 +615,7 @@ def show_category_transition_assessment(previous_category, current_category):
     
     st.markdown("---")
     
-    # NEW: Handle final category assessment differently
+    # Handle final category assessment differently
     if current_category == "completion":
         st.markdown(f"""
         <div class="info-card" style="background: #FEF3C7; border-color: #F59E0B;">
@@ -524,7 +718,7 @@ def show_category_transition_assessment(previous_category, current_category):
             # Mark this transition as assessed
             st.session_state.assessed_transitions.add(transition_key)
             
-            # NEW: Handle final category vs regular transition
+            # Handle final category vs regular transition
             if current_category == "completion":
                 # Go directly to completion page
                 st.session_state.show_category_assessment = False
@@ -535,6 +729,8 @@ def show_category_transition_assessment(previous_category, current_category):
                 st.session_state.show_category_assessment = False
             
             st.rerun()
+
+# ======================== UI PAGES ========================
 
 def show_welcome_page():
     """Show welcome and consent page"""
@@ -698,7 +894,6 @@ def show_welcome_page():
             st.session_state.show_transition_banner = "start_study"
             st.rerun()
 
-
 def get_current_sample():
     """Get current sample data"""
     if st.session_state.current_sample_idx >= len(app.study_data):
@@ -725,7 +920,7 @@ def show_study_interface():
 
     st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 
-    # NEW: Check if we should show category assessment
+    # Check if we should show category assessment
     if st.session_state.get("show_category_assessment", False):
         show_category_transition_assessment(
             st.session_state.assessment_previous_category,
@@ -735,7 +930,7 @@ def show_study_interface():
 
     current = get_current_sample()
     if not current:
-        # NEW: Check if we need final category assessment before completion
+        # Check if we need final category assessment before completion
         should_assess, prev_cat, curr_cat = should_show_category_assessment()
         if should_assess:
             st.session_state.show_category_assessment = True
@@ -844,17 +1039,15 @@ def show_study_interface():
                 desc_c = st.session_state[f"desc_c_{st.session_state.current_sample_idx}"]
                 nov_c = st.session_state[f"nov_c_{st.session_state.current_sample_idx}"]
 
-                submit_rating(current, rel_a, flu_a, desc_a, nov_a,
+                submit_rating_with_csv_backup(current, rel_a, flu_a, desc_a, nov_a,
                               rel_b, flu_b, desc_b, nov_b,
                               rel_c, flu_c, desc_c, nov_c,
                               best_caption, comment)
                 st.rerun()
 
-
-
-def submit_rating(current, rel_a, flu_a, desc_a, nov_a, rel_b, flu_b, desc_b, nov_b,
+def submit_rating_with_csv_backup(current, rel_a, flu_a, desc_a, nov_a, rel_b, flu_b, desc_b, nov_b,
                   rel_c, flu_c, desc_c, nov_c, best_caption, comment):
-    """Submit current rating and advance"""
+    """Submit current rating and advance with CSV backup"""
 
     # Create method mapping
     caption_labels = ["Caption A", "Caption B", "Caption C"]
@@ -883,8 +1076,11 @@ def submit_rating(current, rel_a, flu_a, desc_a, nov_a, rel_b, flu_b, desc_b, no
 
     st.session_state.responses.append(response_data)
     st.session_state.current_sample_idx += 1
+    
+    # Save progress to CSV after each response
+    save_progress_to_csv()
 
-    # NEW: Check if we need to show category assessment
+    # Check if we need to show category assessment
     should_assess, prev_cat, curr_cat = should_show_category_assessment()
     
     if should_assess:
@@ -898,7 +1094,7 @@ def submit_rating(current, rel_a, flu_a, desc_a, nov_a, rel_b, flu_b, desc_b, no
         st.session_state.show_transition_banner = True
 
 def show_completion_page():
-    """Show completion questionnaire"""
+    """Show completion questionnaire with processing indicators"""
     
     # Header
     st.markdown("""
@@ -1052,59 +1248,78 @@ def show_completion_page():
         help="Your insights are valuable for our research"
     )
     
-    # Validation and submission
-    if st.button("💾 Complete Study & Save Results", type="primary", use_container_width=True):
-        # Validate rankings
-        if len(set(ranking_values)) != len(ranking_values):
-            st.error("❌ Please ensure each category has a unique ranking (1-6)")
-        # Validate required radio buttons
-        elif not quality_patterns:
-            st.error("❌ Please indicate if you noticed quality differences between categories")
-        elif not learning_hypothesis:
-            st.error("❌ Please indicate if you think the AI learned some categories better than others")
-        elif not caption_preference:
-            st.error("❌ Please select your caption preference")
-        elif not summary_assessment:
-            st.error("❌ Please rate how ready AI is for fashion e-commerce")
-        elif not forgetting_evidence:
-            st.error("❌ Please indicate if you noticed any quality decrease for earlier categories")
-        else:
-            complete_study(
-                age, gender, quality_patterns, better_categories, worse_categories,
-                learning_hypothesis, better_learned,
-                rankings, caption_preference, summary_assessment,
-                forgetting_evidence, final_feedback
-            )
+    # Modified submit button section with processing indicators
+    if st.session_state.get('processing_completion', False):
+        # Show disabled button while processing
+        st.button(
+            "🔄 Processing... Please wait", 
+            disabled=True, 
+            type="primary", 
+            use_container_width=True
+        )
+        st.warning("⏳ **Please wait...** Your submission is being processed. Do not close this window.")
+    else:
+        # Show normal submit button
+        if st.button("💾 Complete Study & Save Results", type="primary", use_container_width=True):
+            # Validate all required fields first
+            if len(set(ranking_values)) != len(ranking_values):
+                st.error("❌ Please ensure each category has a unique ranking (1-6)")
+            elif not quality_patterns:
+                st.error("❌ Please indicate if you noticed quality differences between categories")
+            elif not learning_hypothesis:
+                st.error("❌ Please indicate if you think the AI learned some categories better than others")
+            elif not caption_preference:
+                st.error("❌ Please select your caption preference")
+            elif not summary_assessment:
+                st.error("❌ Please rate how well the AI learned to describe fashion items")
+            elif not forgetting_evidence:
+                st.error("❌ Please indicate if you noticed any quality decrease for earlier categories")
+            else:
+                # All validation passed, start processing
+                complete_study_with_processing_indicators(
+                    age, gender, quality_patterns, better_categories, worse_categories,
+                    learning_hypothesis, better_learned, rankings, caption_preference,
+                    summary_assessment, forgetting_evidence, final_feedback
+                )
 
-
-def complete_study(age, gender, quality_patterns, better_categories, worse_categories,
-                  learning_hypothesis, better_learned, rankings, caption_preference,
-                  summary_assessment, forgetting_evidence, final_feedback):
-    """Complete the study and save results"""
+def complete_study_with_processing_indicators(age, gender, quality_patterns, better_categories, worse_categories,
+                                            learning_hypothesis, better_learned, rankings, caption_preference,
+                                            summary_assessment, forgetting_evidence, final_feedback):
+    """Complete the study with proper processing indicators"""
+    
+    # Disable the button immediately to prevent double-submission
+    st.session_state.processing_completion = True
     
     try:
-        # Add final questionnaire data
+        # Create placeholder for status updates
+        status_placeholder = st.empty()
+        progress_placeholder = st.empty()
+        
+        with status_placeholder:
+            st.info("🔄 **Processing your submission...** Please don't close this window.")
+        
+        # Step 1: Prepare data
+        with progress_placeholder:
+            show_progress_bar(6, 1, "Preparing final questionnaire data")
+        
+        time.sleep(0.5)  # Brief pause for UI update
+        
         final_data = {
             'participant_id': st.session_state.participant_id,
             'response_type': 'final_questionnaire',
-            # Demographics
             'age_group': age,
             'gender': gender,
-            # Quality patterns
             'quality_patterns_noticed': quality_patterns,
             'better_categories': ", ".join(better_categories) if better_categories else "",
             'worse_categories': ", ".join(worse_categories) if worse_categories else "",
-            # Learning assessment
             'learning_hypothesis': learning_hypothesis,
             'better_learned_categories': ", ".join(better_learned) if better_learned else "",
-            # Rankings
             'accessories_rank': rankings.get("Accessories", ""),
             'bottoms_rank': rankings.get("Bottoms", ""),
             'dresses_rank': rankings.get("Dresses", ""),
             'outerwear_rank': rankings.get("Outerwear", ""),
             'shoes_rank': rankings.get("Shoes", ""),
             'tops_rank': rankings.get("Tops", ""),
-            # Preferences and assessment
             'caption_preference': caption_preference,
             'summary_assessment_rating': summary_assessment,
             'forgetting_evidence': forgetting_evidence,
@@ -1112,63 +1327,128 @@ def complete_study(age, gender, quality_patterns, better_categories, worse_categ
             'completion_timestamp': datetime.now().isoformat()
         }
         
-        # Create dataframe from responses
-        main_responses = st.session_state.responses.copy()
-        df = pd.DataFrame(main_responses)
+        # Step 2: Save to CSV
+        with progress_placeholder:
+            show_progress_bar(6, 2, "Saving backup CSV files")
         
-        # Flatten ratings
-        for idx, response in enumerate(main_responses):
-            for method, ratings in response['ratings'].items():
-                for metric, score in ratings.items():
-                    df.loc[idx, f"{method}_{metric}"] = score
+        csv_success = False
+        csv_files = {}
         
-        # Add final questionnaire data to all rows
-        for col, value in final_data.items():
-            if col != 'participant_id':
-                df[col] = value
+        try:
+            csv_success, main_file, category_file, summary_file = save_final_complete_csv(final_data)
+            csv_files = {
+                'main': main_file,
+                'category': category_file,
+                'summary': summary_file
+            }
+        except Exception as e:
+            st.error(f"❌ CSV save failed: {e}")
         
-        # Save to CSV as backup
-        output_dir = "responses"
-        os.makedirs(output_dir, exist_ok=True)
-        output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_responses.csv")
-        df.to_csv(output_file, index=False)
+        # Step 3: Prepare Google Sheets data
+        with progress_placeholder:
+            show_progress_bar(6, 3, "Preparing data for Google Sheets")
         
-        # Save category assessments to CSV
-        if hasattr(st.session_state, 'category_assessments') and st.session_state.category_assessments:
-            category_df = pd.DataFrame(st.session_state.category_assessments)
-            category_output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_category_assessments.csv")
-            category_df.to_csv(category_output_file, index=False)
+        time.sleep(0.5)
         
-        # Save to Google Sheets
-        sheets_success = True
+        # Step 4: Save main responses to Google Sheets
+        with progress_placeholder:
+            show_progress_bar(6, 4, "Saving main responses to Google Sheets")
         
-        # Save main responses
-        if not save_main_responses_to_sheets(df):
-            sheets_success = False
-            
-        # Save category assessments
-        if not save_category_assessments_to_sheets():
-            sheets_success = False
+        main_sheets_success = False
+        try:
+            with st.spinner("Uploading main responses to Google Sheets..."):
+                main_sheets_success = save_main_responses_to_sheets_fixed(final_data)
+        except Exception as e:
+            st.error(f"❌ Main responses Google Sheets save failed: {e}")
         
-        # Show success message
-        if sheets_success:
-            st.success("✅ Your responses have been saved to both Google Sheets and CSV backup!")
+        # Step 5: Save category assessments to Google Sheets
+        with progress_placeholder:
+            show_progress_bar(6, 5, "Saving category assessments to Google Sheets")
+        
+        category_sheets_success = False
+        try:
+            with st.spinner("Uploading category assessments to Google Sheets..."):
+                category_sheets_success = save_category_assessments_to_sheets()
+        except Exception as e:
+            st.error(f"❌ Category assessments Google Sheets save failed: {e}")
+        
+        # Step 6: Finalize and show results
+        with progress_placeholder:
+            show_progress_bar(6, 6, "Finalizing submission")
+        
+        time.sleep(0.5)
+        
+        # Clear processing indicators
+        status_placeholder.empty()
+        progress_placeholder.empty()
+        
+        # Determine overall success
+        sheets_success = main_sheets_success and category_sheets_success
+        
+        # Show detailed success/failure status
+        st.markdown("## 📊 **Submission Status**")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### 💾 **Local Backup (CSV)**")
+            if csv_success:
+                st.success("✅ **CSV files saved successfully!**")
+                if csv_files['main']:
+                    st.info(f"📄 Main responses: `{csv_files['main']}`")
+                if csv_files['category']:
+                    st.info(f"📄 Category assessments: `{csv_files['category']}`")
+                if csv_files['summary']:
+                    st.info(f"📄 Summary: `{csv_files['summary']}`")
+            else:
+                st.error("❌ **CSV backup failed**")
+        
+        with col2:
+            st.markdown("### ☁️ **Cloud Storage (Google Sheets)**")
+            if sheets_success:
+                st.success("✅ **Google Sheets upload successful!**")
+                st.info("📊 Main responses uploaded")
+                st.info("📊 Category assessments uploaded")
+            elif main_sheets_success or category_sheets_success:
+                st.warning("⚠️ **Partial Google Sheets upload**")
+                if main_sheets_success:
+                    st.info("✅ Main responses uploaded")
+                else:
+                    st.error("❌ Main responses failed")
+                if category_sheets_success:
+                    st.info("✅ Category assessments uploaded")
+                else:
+                    st.error("❌ Category assessments failed")
+            else:
+                st.error("❌ **Google Sheets upload failed**")
+        
+        # Overall status message
+        if csv_success and sheets_success:
+            st.balloons()
+            st.success("🎉 **All data saved successfully!** Your responses are securely stored in both local CSV files and Google Sheets.")
+        elif csv_success:
+            st.success("✅ **Data saved to CSV backup!** Google Sheets had issues, but your responses are safely stored locally.")
+        elif sheets_success:
+            st.success("✅ **Data saved to Google Sheets!** CSV backup had issues, but your responses are stored in the cloud.")
         else:
-            st.warning("⚠️ Responses saved to CSV backup. Google Sheets sync had issues.")
+            st.error("❌ **Error saving data.** Please contact the researcher immediately.")
+            st.error("**Researcher contact:** akash.kumar@dfki.de")
         
-        # Success message
+        # Success summary
         category_assessments_count = len(st.session_state.get('category_assessments', []))
         st.markdown(f"""
-        ## 🎉 Study Completed Successfully!
+        ---
+        ## 🎉 **Study Completed Successfully!**
         
         **Your Contribution:**
         - **Participant ID:** {st.session_state.participant_id}
-        - **Images Evaluated:** {len(main_responses)}
-        - **Captions Rated:** {len(main_responses) * 3}
+        - **Images Evaluated:** {len(st.session_state.responses)}
+        - **Captions Rated:** {len(st.session_state.responses) * 3}
         - **Category Assessments:** {category_assessments_count}
+        - **Completion Time:** {final_data['completion_timestamp']}
         
         **Thank you for contributing to AI research!** 🙏
-                
+        
         ---
         
         **🔬 About Your Data:**
@@ -1179,12 +1459,17 @@ def complete_study(age, gender, quality_patterns, better_categories, worse_categ
         """)
         
         st.session_state.study_complete = True
+        st.session_state.processing_completion = False
         
     except Exception as e:
-        st.error(f"❌ Error saving results: {str(e)}")
+        # Clear processing state on error
+        st.session_state.processing_completion = False
+        st.error(f"❌ **Critical error during submission:** {str(e)}")
+        st.error("**Please contact the researcher immediately:** akash.kumar@dfki.de")
+        st.error(f"**Participant ID:** {st.session_state.participant_id}")
 
 def show_transition_message(message="Loading next image..."):
-    # NEW: Check if this is a category transition
+    # Check if this is a category transition
     banner_value = st.session_state.get("show_transition_banner", "")
     if isinstance(banner_value, str) and banner_value.startswith("category_transition_"):
         category = banner_value.split("_")[-1]
@@ -1213,15 +1498,13 @@ def show_transition_message(message="Loading next image..."):
     </script>
     """, unsafe_allow_html=True)
 
-    from streamlit_js_eval import streamlit_js_eval
-    trigger = streamlit_js_eval(js_expressions="window.scrollY", key="scroll_trigger_top")
-    if isinstance(trigger, int) and trigger <= 10:
-        time.sleep(0.5)
-        st.session_state.show_transition_banner = False
-        st.rerun()
+    # Simple time-based transition instead of streamlit_js_eval
+    time.sleep(1.5)
+    st.session_state.show_transition_banner = False
+    st.rerun()
 
+# ======================== MAIN APP LOGIC ========================
 
-# Main app logic
 def main():
     
     st.markdown("""
@@ -1264,7 +1547,6 @@ def main():
             show_transition_message()
     else:
         show_study_interface()
-
 
 if __name__ == "__main__":
     main()
