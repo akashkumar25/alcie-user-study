@@ -370,14 +370,33 @@ def save_response_to_sheet_with_proper_headers(row_data, worksheet_name="MainRes
         return False
 
 def save_category_assessments_to_sheets():
-    """Save all category assessments to Google Sheets"""
+    """Save all category assessments to Google Sheets - BATCH OPTIMIZED"""
     if not hasattr(st.session_state, 'category_assessments') or not st.session_state.category_assessments:
         return True
     
     try:
-        success_count = 0
+        client = get_gsheet_connection()
+        if not client:
+            return False
+            
+        # Try to open existing spreadsheet
+        try:
+            sheet = client.open("ALCIE User Study Responses")
+        except gspread.SpreadsheetNotFound:
+            sheet = client.create("ALCIE User Study Responses")
+            sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
+        
+        # Get or create worksheet
+        try:
+            worksheet = sheet.worksheet("CategoryAssessments")
+        except gspread.WorksheetNotFound:
+            worksheet = sheet.add_worksheet(title="CategoryAssessments", rows=1000, cols=15)
+            headers = get_category_assessments_headers()
+            worksheet.update('A1:K1', [headers])  # Batch header update
+        
+        # BATCH: Prepare all assessment rows at once
+        all_rows = []
         for assessment in st.session_state.category_assessments:
-            # Convert assessment dict to list in correct order
             row_data = [
                 assessment['participant_id'],
                 assessment['response_type'],
@@ -391,18 +410,20 @@ def save_category_assessments_to_sheets():
                 assessment['comments'],
                 assessment['timestamp']
             ]
-            
-            if save_response_to_sheet_with_proper_headers(row_data, worksheet_name="CategoryAssessments"):
-                success_count += 1
+            all_rows.append(row_data)
         
-        return success_count > 0
+        # BATCH: Single write for all assessments (instead of loop)
+        if all_rows:
+            worksheet.append_rows(all_rows)  # 1 API call instead of 6!
+        
+        return True
         
     except Exception as e:
         st.error(f"❌ Error saving category assessments: {e}")
         return False
 
-def save_main_responses_to_sheets_fixed(final_data):
-    """Save summary participant data to Google Sheets with proper headers"""
+def save_main_responses_to_sheets(final_data):
+    """Save summary participant data to Google Sheets with proper headers - BATCH OPTIMIZED"""
     try:
         # Create summary row data (one row per participant)
         row_data = [
@@ -436,6 +457,78 @@ def save_main_responses_to_sheets_fixed(final_data):
         
     except Exception as e:
         st.error(f"❌ Error saving main responses: {e}")
+        return False
+
+def save_detailed_responses_to_sheets_batch():
+    """Save all detailed responses in batch mode - NEW FUNCTION"""
+    try:
+        client = get_gsheet_connection()
+        if not client:
+            return False
+            
+        # Try to open existing spreadsheet
+        try:
+            sheet = client.open("ALCIE User Study Responses")
+        except gspread.SpreadsheetNotFound:
+            sheet = client.create("ALCIE User Study Responses")
+            sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
+        
+        # Get or create worksheet
+        try:
+            worksheet = sheet.worksheet("DetailedResponses")
+        except gspread.WorksheetNotFound:
+            worksheet = sheet.add_worksheet(title="DetailedResponses", rows=2000, cols=25)
+            headers = get_detailed_responses_headers()
+            worksheet.update('A1:Y1', [headers])  # Batch header update
+        
+        # BATCH: Prepare all detailed rows at once
+        all_rows = []
+        actual_methods = ['random', 'diversity', 'uncertainty']
+        
+        for response in st.session_state.responses:
+            # Base row data
+            row = [
+                response['participant_id'],
+                response['sample_number'],
+                response['image_id'],
+                response['category'],
+                response['introduced_phase'],
+                response['cf_risk'],
+                response.get('assigned_phase', ''),
+                response.get('model_checkpoint', ''),
+                response.get('diversity_score', ''),
+                response.get('is_diverse', ''),
+                response['method_mapping'].get('Caption A', ''),
+                response['method_mapping'].get('Caption B', ''),
+                response['method_mapping'].get('Caption C', ''),
+                response['best_caption_method'],
+                response['comment'],
+                response['timestamp']
+            ]
+            
+            # Add rating data for each method
+            for method in actual_methods:
+                if method in response['ratings']:
+                    ratings = response['ratings'][method]
+                    row.extend([
+                        ratings.get('relevance', ''),
+                        ratings.get('fluency', ''),
+                        ratings.get('descriptiveness', ''),
+                        ratings.get('novelty', '')
+                    ])
+                else:
+                    row.extend(['', '', '', ''])  # Empty if method not found
+            
+            all_rows.append(row)
+        
+        # BATCH: Single write for all detailed responses (instead of 24 individual writes)
+        if all_rows:
+            worksheet.append_rows(all_rows)  # 1 API call instead of 24!
+        
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Error saving detailed responses: {e}")
         return False
 
 # ======================== ENHANCED CSV SAVING FUNCTIONS ========================
@@ -1678,35 +1771,24 @@ def complete_study_with_processing_indicators(age, gender, quality_patterns, bet
         except Exception as e:
             notification_msg = f"Notification failed: {e}"
         
-        # Step 7: Save to Google Sheets
+        # Step 7: Save to Google Sheets (BATCH OPTIMIZED)
         with progress_placeholder:
             show_progress_bar(7, 7, "Finalizing submission")
         
-        # Save enhanced sheets structure
+        # Save enhanced sheets structure using batch operations
         enhanced_sheets_success = False
         try:
-            # Save participant summary
+            # Save participant summary (1 API call)
             summary_row = list(participant_summary.values())
             summary_success = save_response_to_sheet_with_proper_headers(summary_row, "ParticipantSummary")
             
-            # Save detailed responses
-            detailed_success_count = 0
-            for detail in detailed_responses:
-                detail_row = list(detail.values())
-                if save_response_to_sheet_with_proper_headers(detail_row, "DetailedResponses"):
-                    detailed_success_count += 1
+            # Save detailed responses in batch (1 API call instead of 24!)
+            detailed_success = save_detailed_responses_to_sheets_batch()
             
-            enhanced_sheets_success = (summary_success and detailed_success_count == len(detailed_responses))
+            enhanced_sheets_success = (summary_success and detailed_success)
             
         except Exception as e:
             st.error(f"❌ Enhanced Google Sheets save failed: {e}")
-        
-        # Save legacy format to Google Sheets
-        legacy_sheets_success = False
-        try:
-            legacy_sheets_success = save_main_responses_to_sheets_fixed(final_data)
-        except Exception as e:
-            st.error(f"❌ Legacy Google Sheets save failed: {e}")
         
         # Save category assessments
         category_sheets_success = False
@@ -1763,37 +1845,37 @@ def complete_study_with_processing_indicators(age, gender, quality_patterns, bet
             """)
 
         # Optional: Technical details for admin (hidden by default)
-        if st.checkbox("🔧 Show Technical Details (Admin Only)", value=False):
-            col1, col2, col3 = st.columns(3)
+        # if st.checkbox("🔧 Show Technical Details (Admin Only)", value=False):
+        #     col1, col2, col3 = st.columns(3)
             
-            with col1:
-                st.markdown("**CSV Files**")
-                if csv_success:
-                    st.success("✅ CSV saved")
-                    for file_type, file_path in csv_files.items():
-                        if file_path:
-                            st.text(f"📄 {file_type}: {os.path.basename(file_path)}")
-                else:
-                    st.error("❌ CSV failed")
+        #     with col1:
+        #         st.markdown("**CSV Files**")
+        #         if csv_success:
+        #             st.success("✅ CSV saved")
+        #             for file_type, file_path in csv_files.items():
+        #                 if file_path:
+        #                     st.text(f"📄 {file_type}: {os.path.basename(file_path)}")
+        #         else:
+        #             st.error("❌ CSV failed")
             
-            with col2:
-                st.markdown("**Google Sheets**")
-                if sheets_success:
-                    st.success("✅ Sheets uploaded")
-                    st.text("📊 ParticipantSummary")
-                    st.text("📊 DetailedResponses")
-                    st.text("📊 CategoryAssessments")
-                else:
-                    st.error("❌ Sheets failed")
+            # with col2:
+            #     st.markdown("**Google Sheets**")
+            #     if sheets_success:
+            #         st.success("✅ Sheets uploaded")
+            #         st.text("📊 ParticipantSummary")
+            #         st.text("📊 DetailedResponses")
+            #         st.text("📊 CategoryAssessments")
+            #     else:
+            #         st.error("❌ Sheets failed")
             
-            with col3:
-                st.markdown("**Email Backup**")
-                if email_backup_success:
-                    st.success("✅ Email sent")
-                    st.text("📨 ZIP with all CSV files")
-                else:
-                    st.error("❌ Email failed")
-                    st.text(email_message)
+            # with col3:
+            #     st.markdown("**Email Backup**")
+            #     if email_backup_success:
+            #         st.success("✅ Email sent")
+            #         st.text("📨 ZIP with all CSV files")
+            #     else:
+            #         st.error("❌ Email failed")
+            #         st.text(email_message)
         
         st.session_state.study_complete = True
         st.session_state.processing_completion = False
