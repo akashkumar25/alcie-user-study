@@ -23,6 +23,7 @@ import os
 from datetime import datetime
 from PIL import Image
 import time
+from streamlit_js_eval import streamlit_js_eval
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -1498,10 +1499,11 @@ def show_transition_message(message="Loading next image..."):
     </script>
     """, unsafe_allow_html=True)
 
-    # Simple time-based transition instead of streamlit_js_eval
-    time.sleep(1.5)
-    st.session_state.show_transition_banner = False
-    st.rerun()
+    trigger = streamlit_js_eval(js_expressions="window.scrollY", key="scroll_trigger_top")
+    if isinstance(trigger, int) and trigger <= 10:
+        time.sleep(0.5)
+        st.session_state.show_transition_banner = False
+        st.rerun()
 
 # ======================== MAIN APP LOGIC ========================
 
