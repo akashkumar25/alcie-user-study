@@ -10,7 +10,7 @@ import streamlit as st
 # Page configuration - MUST BE FIRST AND ONLY ONCE
 st.set_page_config(
     page_title="ALCIE User Study",
-    page_icon="🎯",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -1112,7 +1112,7 @@ def show_welcome_page():
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>🎯 ALCIE Fashion Study</h1>
+        <h1>📋ALCIE USER Study</h1>
         <h3>Active Learning for Continual Image Captioning Enhancement</h3>
     </div>
     """, unsafe_allow_html=True)
