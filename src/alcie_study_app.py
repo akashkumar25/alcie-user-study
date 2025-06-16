@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ALCIE User Study - Complete Streamlit Version with All Improvements
+ALCIE User Study - Complete Streamlit Version with All Fixes Applied
 Enhanced UI with automatic data collection, between-category assessments, and robust CSV/Sheets saving
 Run with: streamlit run alcie_study_streamlit.py
 """
@@ -25,7 +25,7 @@ from PIL import Image
 import time
 from streamlit_js_eval import streamlit_js_eval
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials  # ✅ FIXED: Updated import
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -39,14 +39,6 @@ import io
 def get_email_config():
     """Get email configuration from Streamlit secrets"""
     try:
-        # Add these to your secrets.toml file:
-        # [email]
-        # smtp_server = "smtp.gmail.com"
-        # smtp_port = 587
-        # sender_email = "your-study-email@gmail.com"
-        # sender_password = "your-app-password"  # Use App Password, not regular password
-        # researcher_email = "akash.kumar@dfki.de"
-        
         return {
             'smtp_server': st.secrets["email"]["smtp_server"],
             'smtp_port': st.secrets["email"]["smtp_port"],
@@ -230,80 +222,17 @@ ALCIE Study System - DFKI
         
     except Exception as e:
         return False, f"Notification email failed: {str(e)}"
-    
-# ======================== IMPROVED GOOGLE SHEETS FUNCTIONS ========================
 
-def get_main_responses_headers():
-    """Generate headers that match the actual data structure"""
-    base_headers = [
-        'participant_id', 'fashion_interest', 'total_samples', 'all_image_ids', 
-        'all_categories', 'response_type', 'age_group', 'gender',
-        'quality_patterns_noticed', 'better_categories', 'worse_categories',
-        'learning_hypothesis', 'better_learned_categories', 'accessories_rank',
-        'bottoms_rank', 'dresses_rank', 'outerwear_rank', 'shoes_rank', 
-        'tops_rank', 'caption_preference', 'summary_assessment_rating',
-        'forgetting_evidence', 'final_feedback', 'completion_timestamp'
-    ]
-    return base_headers
-
-def get_detailed_responses_headers():
-    """Generate headers for detailed per-response data with method ratings - UPDATED for ALCIE"""
-    base_headers = [
-        'participant_id', 'sample_number', 'image_id', 'category', 'introduced_phase',
-        'cf_risk', 'assigned_phase', 'model_checkpoint', 'diversity_score', 'is_diverse',
-        'method_caption_a', 'method_caption_b', 'method_caption_c',
-        'best_caption_method', 'comment', 'timestamp'
-    ]
-    
-    # Your actual method names from the JSON data (instead of example_methods)
-    actual_methods = ['random', 'diversity', 'uncertainty']  # ← CHANGED: real method names
-    
-    # Add rating headers for each method
-    rating_headers = []
-    for method in actual_methods:
-        rating_headers.extend([
-            f'{method}_relevance',
-            f'{method}_fluency', 
-            f'{method}_descriptiveness',
-            f'{method}_novelty'
-        ])
-    
-    return base_headers + rating_headers
-
-def get_category_assessments_headers():
-    """Headers for category assessments"""
-    return [
-        'participant_id', 'response_type', 'previous_category', 'current_category',
-        'sample_idx_at_transition', 'quality_rating', 'quality_drop',
-        'consistency_rating', 'expectations_rating', 'comments', 'timestamp'
-    ]
-
-def ensure_headers_exist(worksheet, headers):
-    """Ensure headers exist and match expected structure"""
-    try:
-        # Get existing headers (first row)
-        existing_headers = worksheet.row_values(1) if worksheet.row_count > 0 else []
-        
-        # If no headers or headers don't match, update them
-        if not existing_headers or existing_headers != headers:
-            if existing_headers:
-                # Clear first row and insert new headers
-                worksheet.delete_rows(1, 1)
-            worksheet.insert_row(headers, 1)
-            return True
-        return False
-    except Exception as e:
-        st.warning(f"Could not ensure headers: {e}")
-        return False
+# ======================== FIXED GOOGLE SHEETS FUNCTIONS ========================
 
 def get_gsheet_connection():
-    """Get Google Sheets connection with proper error handling"""
+    """Get Google Sheets connection with modern authentication - FIXED"""
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         
-        # Use the correct secret key that matches your secrets.toml
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(
-            st.secrets["gcp_service_account"], scope
+        # ✅ FIXED: Use modern google-auth instead of deprecated oauth2client
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=scope
         )
         client = gspread.authorize(creds)
         return client
@@ -314,194 +243,150 @@ def get_gsheet_connection():
         st.error(f"❌ Failed to connect to Google Sheets: {e}")
         return None
 
-def save_response_to_sheet_with_proper_headers(row_data, worksheet_name="MainResponses"):
-    """Save single row to Google Sheets with proper header management - UPDATED"""
+def safe_ensure_headers(worksheet, expected_headers):
+    """Safely ensure headers exist without clearing existing participant data - GENERALIZED"""
     try:
-        client = get_gsheet_connection()
-        if not client:
-            return False
-            
-        # Try to open existing spreadsheet, create if doesn't exist
-        try:
-            sheet = client.open("ALCIE User Study Responses")
-        except gspread.SpreadsheetNotFound:
-            sheet = client.create("ALCIE User Study Responses")
-            sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
+        # Check if worksheet has any content
+        if worksheet.row_count == 0:
+            # Empty worksheet - safe to add headers
+            worksheet.insert_row(expected_headers, 1)
+            return True
         
-        # Get or create worksheet
-        try:
-            worksheet = sheet.worksheet(worksheet_name)
-        except gspread.WorksheetNotFound:
-            worksheet = sheet.add_worksheet(title=worksheet_name, rows=1000, cols=50)
+        # Get first row to check for headers
+        existing_first_row = worksheet.row_values(1)
         
-        # Ensure proper headers based on worksheet type - UPDATED LOGIC:
-        if worksheet_name == "ParticipantSummary":  # ← CHANGED: new worksheet name
-            headers = [
-                'participant_id', 'fashion_interest', 'age_group', 'gender', 'total_samples',
-                'completion_timestamp', 'quality_patterns_noticed', 'better_categories',
-                'worse_categories', 'learning_hypothesis', 'better_learned_categories',
-                'accessories_rank', 'bottoms_rank', 'dresses_rank', 'outerwear_rank',
-                'shoes_rank', 'tops_rank', 'caption_preference', 'summary_assessment_rating',
-                'forgetting_evidence', 'final_feedback'
-            ]
-        elif worksheet_name == "DetailedResponses":
-            headers = get_detailed_responses_headers()  # ← USES updated function
-        elif worksheet_name == "CategoryAssessments":
-            headers = get_category_assessments_headers()
-        elif worksheet_name == "MainResponses":  # ← KEEP for backward compatibility
-            headers = get_main_responses_headers()
+        # If first row is empty, insert headers
+        if not existing_first_row:
+            worksheet.insert_row(expected_headers, 1)
+            return True
+        
+        # Check if first row matches expected headers
+        if existing_first_row == expected_headers:
+            # Headers already correct
+            return True
+        
+        # Determine if first row contains data or incorrect headers
+        first_cell = existing_first_row[0] if existing_first_row else ""
+        
+        # ✅ GENERALIZED DATA DETECTION - Check multiple patterns:
+        is_participant_data = (
+            # Participant ID pattern (starts with P followed by digits)
+            (first_cell.startswith('P') and any(c.isdigit() for c in first_cell)) or
+            # Timestamp pattern (contains date-like format)
+            ('-' in first_cell and any(c.isdigit() for c in first_cell) and len(first_cell) > 10) or
+            # UUID-like pattern (long alphanumeric string)
+            (len(first_cell) > 15 and any(c.isdigit() for c in first_cell) and any(c.isalpha() for c in first_cell))
+        )
+        
+        # ✅ ADDITIONAL CHECK - Compare with expected header structure
+        expected_first_header = expected_headers[0].lower()
+        actual_first_cell = first_cell.lower()
+        
+        # If first cell doesn't match expected first header pattern
+        header_mismatch = (
+            expected_first_header == 'participant_id' and not actual_first_cell.startswith('participant') or
+            expected_first_header.startswith('participant') and not actual_first_cell.startswith('participant')
+        )
+        
+        if is_participant_data or header_mismatch:
+            st.warning("⚠️ Detected data in first row - inserting headers above existing data")
+            worksheet.insert_row(expected_headers, 1)
+            return True
         else:
-            headers = []
-        
-        if headers:
-            ensure_headers_exist(worksheet, headers)
-        
-        # Convert row_data to list of strings
-        if isinstance(row_data, (list, tuple)):
-            string_row = [str(item) for item in row_data]
-        else:
-            string_row = [str(row_data)]
-            
-        worksheet.append_row(string_row)
-        return True
+            # First row seems to be headers (even if different format)
+            st.info(f"ℹ️ Headers detected (format: {existing_first_row[0]}...)")
+            return True
         
     except Exception as e:
-        st.warning(f"❗ Could not save to Google Sheet ({worksheet_name}): {e}")
+        st.error(f"❌ Header management failed: {e}")
         return False
 
-def save_category_assessments_to_sheets():
-    """Save all category assessments to Google Sheets - BATCH OPTIMIZED with HEADERS"""
-    if not hasattr(st.session_state, 'category_assessments') or not st.session_state.category_assessments:
-        return True
+def get_detailed_responses_headers():
+    """Generate headers for detailed per-response data - FIXED ORDER"""
+    base_headers = [
+        'participant_id', 'sample_number', 'image_id', 'category', 'introduced_phase',
+        'cf_risk', 'assigned_phase', 'model_checkpoint', 'diversity_score', 'is_diverse',
+        'method_caption_a', 'method_caption_b', 'method_caption_c',
+        'best_caption_method', 'comment', 'timestamp'  # ✅ FIXED: timestamp at position 16
+    ]
     
-    try:
-        client = get_gsheet_connection()
-        if not client:
-            return False
-            
-        # Try to open existing spreadsheet
-        try:
-            sheet = client.open("ALCIE User Study Responses")
-        except gspread.SpreadsheetNotFound:
-            sheet = client.create("ALCIE User Study Responses")
-            sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
-        
-        # Get or create worksheet WITH HEADERS
-        try:
-            worksheet = sheet.worksheet("CategoryAssessments")
-        except gspread.WorksheetNotFound:
-            worksheet = sheet.add_worksheet(title="CategoryAssessments", rows=1000, cols=15)
-            # CREATE HEADERS - this was missing!
-            headers = [
-                'participant_id', 'response_type', 'previous_category', 'current_category',
-                'sample_idx_at_transition', 'quality_rating', 'quality_drop',
-                'consistency_rating', 'expectations_rating', 'comments', 'timestamp'
-            ]
-            worksheet.update('A1:K1', [headers])  # Batch header creation
-        
-        # BATCH: Prepare all assessment rows at once
-        all_rows = []
-        for assessment in st.session_state.category_assessments:
-            row_data = [
-                assessment['participant_id'],
-                assessment['response_type'],
-                assessment['previous_category'],
-                assessment['current_category'],
-                assessment['sample_idx_at_transition'],
-                assessment['quality_rating'],
-                assessment['quality_drop'],
-                assessment['consistency_rating'],
-                assessment['expectations_rating'],
-                assessment['comments'],
-                assessment['timestamp']
-            ]
-            all_rows.append(row_data)
-        
-        # BATCH: Single write for all assessments
-        if all_rows:
-            worksheet.append_rows(all_rows)
-        
-        return True
-        
-    except Exception as e:
-        st.error(f"❌ Error saving category assessments: {e}")
-        return False
+    # Add rating headers for each method IN CORRECT ORDER
+    actual_methods = ['random', 'diversity', 'uncertainty']
+    rating_headers = []
+    for method in actual_methods:
+        rating_headers.extend([
+            f'{method}_relevance',
+            f'{method}_fluency', 
+            f'{method}_descriptiveness',
+            f'{method}_novelty'
+        ])
+    
+    return base_headers + rating_headers  # Total: 28 columns
 
-def save_main_responses_to_sheets(final_data):
-    """Save summary participant data to Google Sheets with proper headers - BATCH OPTIMIZED"""
-    try:
-        # Create summary row data (one row per participant)
-        row_data = [
-            st.session_state.participant_id,
-            st.session_state.fashion_interest,
-            len(st.session_state.responses),  # total samples
-            ', '.join([str(r['image_id']) for r in st.session_state.responses]),
-            ', '.join([str(r['category']) for r in st.session_state.responses]),
-            final_data.get('response_type', ''),
-            final_data.get('age_group', ''),
-            final_data.get('gender', ''),
-            final_data.get('quality_patterns_noticed', ''),
-            final_data.get('better_categories', ''),
-            final_data.get('worse_categories', ''),
-            final_data.get('learning_hypothesis', ''),
-            final_data.get('better_learned_categories', ''),
-            final_data.get('accessories_rank', ''),
-            final_data.get('bottoms_rank', ''),
-            final_data.get('dresses_rank', ''),
-            final_data.get('outerwear_rank', ''),
-            final_data.get('shoes_rank', ''),
-            final_data.get('tops_rank', ''),
-            final_data.get('caption_preference', ''),
-            final_data.get('summary_assessment_rating', ''),
-            final_data.get('forgetting_evidence', ''),
-            final_data.get('final_feedback', ''),
-            final_data.get('completion_timestamp', '')
-        ]
-        
-        return save_response_to_sheet_with_proper_headers(row_data, worksheet_name="MainResponses")
-        
-    except Exception as e:
-        st.error(f"❌ Error saving main responses: {e}")
-        return False
+def get_participant_summary_headers():
+    """Headers for participant summary - NEW"""
+    return [
+        'participant_id', 'fashion_interest', 'age_group', 'gender', 'total_samples',
+        'completion_timestamp', 'quality_patterns_noticed', 'better_categories',
+        'worse_categories', 'learning_hypothesis', 'better_learned_categories',
+        'accessories_rank', 'bottoms_rank', 'dresses_rank', 'outerwear_rank',
+        'shoes_rank', 'tops_rank', 'caption_preference', 'summary_assessment_rating',
+        'forgetting_evidence', 'final_feedback'
+    ]
+
+def get_category_assessments_headers():
+    """Headers for category assessments - NEW"""
+    return [
+        'participant_id', 'response_type', 'previous_category', 'current_category',
+        'sample_idx_at_transition', 'quality_rating', 'quality_drop',
+        'consistency_rating', 'expectations_rating', 'comments', 'timestamp'
+    ]
+
+def get_main_responses_headers():
+    """Headers for main responses (legacy format) - NEW"""
+    return [
+        'participant_id', 'fashion_interest', 'total_samples', 'all_image_ids', 
+        'all_categories', 'response_type', 'age_group', 'gender',
+        'quality_patterns_noticed', 'better_categories', 'worse_categories',
+        'learning_hypothesis', 'better_learned_categories', 'accessories_rank',
+        'bottoms_rank', 'dresses_rank', 'outerwear_rank', 'shoes_rank', 
+        'tops_rank', 'caption_preference', 'summary_assessment_rating',
+        'forgetting_evidence', 'final_feedback', 'completion_timestamp'
+    ]
 
 def save_detailed_responses_to_sheets_batch():
-    """Save all detailed responses in batch mode - WITH PROPER HEADERS"""
+    """Save all detailed responses in batch mode - COMPLETELY FIXED"""
     try:
         client = get_gsheet_connection()
         if not client:
             return False
             
-        # Try to open existing spreadsheet
+        # Get or create spreadsheet
         try:
             sheet = client.open("ALCIE User Study Responses")
         except gspread.SpreadsheetNotFound:
             sheet = client.create("ALCIE User Study Responses")
-            sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
+            sheet.share('akash.kumar@dfki.de', perm_type='user', role='writer')
         
-        # Get or create worksheet WITH HEADERS
+        # Get or create worksheet
         try:
             worksheet = sheet.worksheet("DetailedResponses")
         except gspread.WorksheetNotFound:
             worksheet = sheet.add_worksheet(title="DetailedResponses", rows=2000, cols=30)
-            # CREATE HEADERS - this was missing!
-            headers = [
-                'participant_id', 'sample_number', 'image_id', 'category', 'introduced_phase',
-                'cf_risk', 'assigned_phase', 'model_checkpoint', 'diversity_score', 'is_diverse',
-                'method_caption_a', 'method_caption_b', 'method_caption_c',
-                'best_caption_method', 'comment', 'timestamp',
-                'random_relevance', 'random_fluency', 'random_descriptiveness', 'random_novelty',
-                'diversity_relevance', 'diversity_fluency', 'diversity_descriptiveness', 'diversity_novelty',
-                'uncertainty_relevance', 'uncertainty_fluency', 'uncertainty_descriptiveness', 'uncertainty_novelty'
-            ]
-            worksheet.update('A1:AB1', [headers])  # Batch header creation
         
-        # BATCH: Prepare all detailed rows at once
+        # ✅ SAFE HEADER MANAGEMENT - No data loss!
+        headers = get_detailed_responses_headers()
+        if not safe_ensure_headers(worksheet, headers):
+            return False
+        
+        # ✅ PREPARE DATA WITH CORRECT STRUCTURE
         all_rows = []
         actual_methods = ['random', 'diversity', 'uncertainty']
         
         for response in st.session_state.responses:
-            # Base row data
+            # ✅ COMPLETE ROW IN CORRECT ORDER (28 fields total)
             row = [
+                # Base fields (1-16) - PARTICIPANT_ID FIRST, TIMESTAMP AT POSITION 16
                 response['participant_id'],
                 response['sample_number'],
                 response['image_id'],
@@ -517,27 +402,29 @@ def save_detailed_responses_to_sheets_batch():
                 response['method_mapping'].get('Caption C', ''),
                 response['best_caption_method'],
                 response['comment'],
-                response['timestamp']
+                response['timestamp'],  # ✅ Position 16 - CORRECT!
+                
+                # Rating fields (17-28) - ALL METHODS IN ORDER
+                response['ratings']['random']['relevance'],
+                response['ratings']['random']['fluency'], 
+                response['ratings']['random']['descriptiveness'],
+                response['ratings']['random']['novelty'],
+                response['ratings']['diversity']['relevance'],
+                response['ratings']['diversity']['fluency'],
+                response['ratings']['diversity']['descriptiveness'], 
+                response['ratings']['diversity']['novelty'],
+                response['ratings']['uncertainty']['relevance'],
+                response['ratings']['uncertainty']['fluency'],
+                response['ratings']['uncertainty']['descriptiveness'],
+                response['ratings']['uncertainty']['novelty']
             ]
-            
-            # Add rating data for each method in consistent order
-            for method in actual_methods:
-                if method in response['ratings']:
-                    ratings = response['ratings'][method]
-                    row.extend([
-                        ratings.get('relevance', ''),
-                        ratings.get('fluency', ''),
-                        ratings.get('descriptiveness', ''),
-                        ratings.get('novelty', '')
-                    ])
-                else:
-                    row.extend(['', '', '', ''])  # Empty if method not found
             
             all_rows.append(row)
         
-        # BATCH: Single write for all detailed responses
+        # ✅ BATCH WRITE - Single API call for all data
         if all_rows:
             worksheet.append_rows(all_rows)
+            # st.success(f"✅ Saved {len(all_rows)} detailed responses with proper structure!")
         
         return True
         
@@ -546,36 +433,31 @@ def save_detailed_responses_to_sheets_batch():
         return False
 
 def save_participant_summary_to_sheets_batch(final_data):
-    """Save participant summary with proper headers - ENHANCED"""
+    """Save participant summary with proper headers - FIXED"""
     try:
         client = get_gsheet_connection()
         if not client:
             return False
             
-        # Try to open existing spreadsheet
+        # Get or create spreadsheet
         try:
             sheet = client.open("ALCIE User Study Responses")
         except gspread.SpreadsheetNotFound:
             sheet = client.create("ALCIE User Study Responses")
-            sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
+            sheet.share('akash.kumar@dfki.de', perm_type='user', role='writer')
         
-        # Get or create worksheet WITH HEADERS
+        # Get or create worksheet
         try:
             worksheet = sheet.worksheet("ParticipantSummary")
         except gspread.WorksheetNotFound:
             worksheet = sheet.add_worksheet(title="ParticipantSummary", rows=1000, cols=25)
-            # CREATE HEADERS
-            headers = [
-                'participant_id', 'fashion_interest', 'age_group', 'gender', 'total_samples',
-                'completion_timestamp', 'quality_patterns_noticed', 'better_categories',
-                'worse_categories', 'learning_hypothesis', 'better_learned_categories',
-                'accessories_rank', 'bottoms_rank', 'dresses_rank', 'outerwear_rank',
-                'shoes_rank', 'tops_rank', 'caption_preference', 'summary_assessment_rating',
-                'forgetting_evidence', 'final_feedback'
-            ]
-            worksheet.update('A1:U1', [headers])  # Batch header creation
         
-        # Single summary row
+        # ✅ SAFE HEADER MANAGEMENT
+        headers = get_participant_summary_headers()
+        if not safe_ensure_headers(worksheet, headers):
+            return False
+        
+        # ✅ SINGLE SUMMARY ROW IN CORRECT ORDER
         row = [
             st.session_state.participant_id,
             st.session_state.fashion_interest,
@@ -601,10 +483,129 @@ def save_participant_summary_to_sheets_batch(final_data):
         ]
         
         worksheet.append_row(row)
+        # st.success("✅ Participant summary saved with headers!")
         return True
         
     except Exception as e:
         st.error(f"❌ Error saving participant summary: {e}")
+        return False
+
+def save_category_assessments_to_sheets():
+    """Save all category assessments to Google Sheets - FIXED WITH HEADERS"""
+    if not hasattr(st.session_state, 'category_assessments') or not st.session_state.category_assessments:
+        return True
+    
+    try:
+        client = get_gsheet_connection()
+        if not client:
+            return False
+            
+        # Get or create spreadsheet
+        try:
+            sheet = client.open("ALCIE User Study Responses")
+        except gspread.SpreadsheetNotFound:
+            sheet = client.create("ALCIE User Study Responses")
+            sheet.share('akash.kumar@dfki.de', perm_type='user', role='writer')
+        
+        # Get or create worksheet
+        try:
+            worksheet = sheet.worksheet("CategoryAssessments")
+        except gspread.WorksheetNotFound:
+            worksheet = sheet.add_worksheet(title="CategoryAssessments", rows=1000, cols=15)
+        
+        # ✅ SAFE HEADER MANAGEMENT
+        headers = get_category_assessments_headers()
+        if not safe_ensure_headers(worksheet, headers):
+            return False
+        
+        # ✅ PREPARE ALL ASSESSMENT ROWS IN CORRECT ORDER
+        all_rows = []
+        for assessment in st.session_state.category_assessments:
+            row_data = [
+                assessment['participant_id'],
+                assessment['response_type'],
+                assessment['previous_category'],
+                assessment['current_category'],
+                assessment['sample_idx_at_transition'],
+                assessment['quality_rating'],
+                assessment['quality_drop'],
+                assessment['consistency_rating'],
+                assessment['expectations_rating'],
+                assessment['comments'],
+                assessment['timestamp']
+            ]
+            all_rows.append(row_data)
+        
+        # ✅ BATCH WRITE
+        if all_rows:
+            worksheet.append_rows(all_rows)
+            # st.success(f"✅ Saved {len(all_rows)} category assessments!")
+        
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Error saving category assessments: {e}")
+        return False
+
+def save_main_responses_to_sheets(final_data):
+    """Save main responses (legacy format) - FIXED"""
+    try:
+        client = get_gsheet_connection()
+        if not client:
+            return False
+            
+        # Get or create spreadsheet
+        try:
+            sheet = client.open("ALCIE User Study Responses")
+        except gspread.SpreadsheetNotFound:
+            sheet = client.create("ALCIE User Study Responses")
+            sheet.share('akash.kumar@dfki.de', perm_type='user', role='writer')
+        
+        # Get or create worksheet
+        try:
+            worksheet = sheet.worksheet("MainResponses")
+        except gspread.WorksheetNotFound:
+            worksheet = sheet.add_worksheet(title="MainResponses", rows=1000, cols=30)
+        
+        # ✅ SAFE HEADER MANAGEMENT
+        headers = get_main_responses_headers()
+        if not safe_ensure_headers(worksheet, headers):
+            return False
+        
+        # ✅ CREATE SUMMARY ROW IN CORRECT ORDER
+        row_data = [
+            st.session_state.participant_id,
+            st.session_state.fashion_interest,
+            len(st.session_state.responses),
+            ', '.join([str(r['image_id']) for r in st.session_state.responses]),
+            ', '.join([str(r['category']) for r in st.session_state.responses]),
+            'final_questionnaire',
+            final_data.get('age_group', ''),
+            final_data.get('gender', ''),
+            final_data.get('quality_patterns_noticed', ''),
+            final_data.get('better_categories', ''),
+            final_data.get('worse_categories', ''),
+            final_data.get('learning_hypothesis', ''),
+            final_data.get('better_learned_categories', ''),
+            final_data.get('accessories_rank', ''),
+            final_data.get('bottoms_rank', ''),
+            final_data.get('dresses_rank', ''),
+            final_data.get('outerwear_rank', ''),
+            final_data.get('shoes_rank', ''),
+            final_data.get('tops_rank', ''),
+            final_data.get('caption_preference', ''),
+            final_data.get('summary_assessment_rating', ''),
+            final_data.get('forgetting_evidence', ''),
+            final_data.get('final_feedback', ''),
+            final_data.get('completion_timestamp', '')
+        ]
+        
+        worksheet.append_row(row_data)
+        # st.success("✅ Main responses saved!")
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Error saving main responses: {e}")
         return False
 
 # ======================== ENHANCED CSV SAVING FUNCTIONS ========================
@@ -1420,14 +1421,23 @@ def show_study_interface():
 
 def submit_rating_with_csv_backup(current, rel_a, flu_a, desc_a, nov_a, rel_b, flu_b, desc_b, nov_b,
                   rel_c, flu_c, desc_c, nov_c, best_caption, comment):
-    """Submit current rating and advance with CSV backup - ENHANCED for ALCIE data"""
+    """Submit current rating and advance with CSV backup - FIXED SLIDER VALUES"""
+
+    # ✅ DEBUG SLIDER VALUES TO ENSURE THEY'RE NOT ALL 3
+    if st.checkbox("🔧 Show Debug Info", value=False):
+        st.write(f"🔍 DEBUG - Slider values: A({rel_a},{flu_a},{desc_a},{nov_a}) B({rel_b},{flu_b},{desc_b},{nov_b}) C({rel_c},{flu_c},{desc_c},{nov_c})")
+        
+        # Check if all values are default (3) - this would indicate a bug
+        all_values = [rel_a, flu_a, desc_a, nov_a, rel_b, flu_b, desc_b, nov_b, rel_c, flu_c, desc_c, nov_c]
+        if all(v == 3 for v in all_values):
+            st.warning("⚠️ All slider values are 3 (default) - please ensure you moved the sliders!")
 
     # Create method mapping
     caption_labels = ["Caption A", "Caption B", "Caption C"]
     method_mapping = {caption_labels[i]: current['methods'][i] for i in range(3)}
     best_method = method_mapping[best_caption]
 
-    # Store response with ENHANCED data collection
+    # ✅ STORE RESPONSE WITH CORRECT STRUCTURE
     response_data = {
         'participant_id': st.session_state.participant_id,
         'fashion_interest': st.session_state.fashion_interest,
@@ -1436,13 +1446,10 @@ def submit_rating_with_csv_backup(current, rel_a, flu_a, desc_a, nov_a, rel_b, f
         'category': current['sample_data']['category'],
         'introduced_phase': current['sample_data']['introduced_phase'],
         'cf_risk': current['sample_data']['cf_risk'],
-        
-        # ADD these new fields from your JSON data:
         'assigned_phase': current['sample_data'].get('assigned_phase', ''),
         'model_checkpoint': current['sample_data'].get('model_checkpoint', ''),
         'diversity_score': current['sample_data'].get('diversity_score', ''),
         'is_diverse': current['sample_data'].get('is_diverse', ''),
-        
         'method_mapping': method_mapping,
         'ratings': {
             current['methods'][0]: {'relevance': rel_a, 'fluency': flu_a, 'descriptiveness': desc_a, 'novelty': nov_a},
@@ -1663,7 +1670,7 @@ def show_completion_page():
 def complete_study_with_processing_indicators(age, gender, quality_patterns, better_categories, worse_categories,
                                             learning_hypothesis, better_learned, rankings, caption_preference,
                                             summary_assessment, forgetting_evidence, final_feedback):
-    """Complete the study with proper processing indicators - ENHANCED for ALCIE"""
+    """Complete the study with proper processing indicators - ALL FIXES APPLIED"""
     
     st.session_state.processing_completion = True
     
@@ -1677,7 +1684,7 @@ def complete_study_with_processing_indicators(age, gender, quality_patterns, bet
         
         # Step 1: Prepare final questionnaire data
         with progress_placeholder:
-            show_progress_bar(7, 1, "Preparing final questionnaire data")
+            st.progress(1/7, text="Step 1/7: Preparing final questionnaire data")
         
         time.sleep(0.5)
         
@@ -1704,273 +1711,89 @@ def complete_study_with_processing_indicators(age, gender, quality_patterns, bet
             'completion_timestamp': datetime.now().isoformat()
         }
         
-        # Step 2: Create participant summary for new structure
+        # Step 2: Save to Google Sheets with ALL FIXES
         with progress_placeholder:
-            show_progress_bar(7, 2, "Creating participant summary")
+            st.progress(2/7, text="Step 2/7: Saving participant summary")
         
-        participant_summary = {
-            'participant_id': st.session_state.participant_id,
-            'fashion_interest': st.session_state.fashion_interest,
-            'age_group': final_data.get('age_group', ''),
-            'gender': final_data.get('gender', ''),
-            'total_samples': len(st.session_state.responses),
-            'completion_timestamp': final_data['completion_timestamp'],
-            'quality_patterns_noticed': final_data.get('quality_patterns_noticed', ''),
-            'better_categories': final_data.get('better_categories', ''),
-            'worse_categories': final_data.get('worse_categories', ''),
-            'learning_hypothesis': final_data.get('learning_hypothesis', ''),
-            'better_learned_categories': final_data.get('better_learned_categories', ''),
-            'accessories_rank': final_data.get('accessories_rank', ''),
-            'bottoms_rank': final_data.get('bottoms_rank', ''),
-            'dresses_rank': final_data.get('dresses_rank', ''),
-            'outerwear_rank': final_data.get('outerwear_rank', ''),
-            'shoes_rank': final_data.get('shoes_rank', ''),
-            'tops_rank': final_data.get('tops_rank', ''),
-            'caption_preference': final_data.get('caption_preference', ''),
-            'summary_assessment_rating': final_data.get('summary_assessment_rating', ''),
-            'forgetting_evidence': final_data.get('forgetting_evidence', ''),
-            'final_feedback': final_data.get('final_feedback', '')
-        }
+        summary_success = save_participant_summary_to_sheets_batch(final_data)
         
-        # Step 3: Create detailed responses for ALCIE analysis
         with progress_placeholder:
-            show_progress_bar(7, 3, "Processing detailed responses")
+            st.progress(3/7, text="Step 3/7: Saving detailed responses")
         
-        detailed_responses = []
-        actual_methods = ['random', 'diversity', 'uncertainty']
+        detailed_success = save_detailed_responses_to_sheets_batch()
         
-        for response in st.session_state.responses:
-            detail_row = {
-                'participant_id': response['participant_id'],
-                'sample_number': response['sample_number'],
-                'image_id': response['image_id'],
-                'category': response['category'],
-                'introduced_phase': response['introduced_phase'],
-                'cf_risk': response['cf_risk'],
-                'assigned_phase': response.get('assigned_phase', ''),
-                'model_checkpoint': response.get('model_checkpoint', ''),
-                'diversity_score': response.get('diversity_score', ''),
-                'is_diverse': response.get('is_diverse', ''),
-                'best_caption_method': response['best_caption_method'],
-                'comment': response['comment'],
-                'timestamp': response['timestamp']
-            }
-            
-            # Add method mappings
-            method_mappings = response['method_mapping']
-            detail_row['method_caption_a'] = method_mappings.get('Caption A', '')
-            detail_row['method_caption_b'] = method_mappings.get('Caption B', '')
-            detail_row['method_caption_c'] = method_mappings.get('Caption C', '')
-            
-            # Add all ratings for each method
-            for method in actual_methods:
-                if method in response['ratings']:
-                    ratings = response['ratings'][method]
-                    detail_row[f'{method}_relevance'] = ratings.get('relevance', '')
-                    detail_row[f'{method}_fluency'] = ratings.get('fluency', '')
-                    detail_row[f'{method}_descriptiveness'] = ratings.get('descriptiveness', '')
-                    detail_row[f'{method}_novelty'] = ratings.get('novelty', '')
-                else:
-                    detail_row[f'{method}_relevance'] = ''
-                    detail_row[f'{method}_fluency'] = ''
-                    detail_row[f'{method}_descriptiveness'] = ''
-                    detail_row[f'{method}_novelty'] = ''
-            
-            detailed_responses.append(detail_row)
-        
-        # Step 4: Save enhanced CSV structure
         with progress_placeholder:
-            show_progress_bar(7, 4, "Saving enhanced CSV files")
+            st.progress(4/7, text="Step 4/7: Saving category assessments")
         
-        csv_success = False
-        csv_files = {}
+        category_success = save_category_assessments_to_sheets()
+        
+        with progress_placeholder:
+            st.progress(5/7, text="Step 5/7: Saving main responses")
+        
+        main_success = save_main_responses_to_sheets(final_data)
+        
+        # Step 6: CSV backup
+        with progress_placeholder:
+            st.progress(6/7, text="Step 6/7: Creating CSV backup")
+        
+        csv_success, final_file, category_file, summary_file = save_final_complete_csv(final_data)
+        
+        # Step 7: Email backup (optional)
+        with progress_placeholder:
+            st.progress(7/7, text="Step 7/7: Finalizing submission")
         
         try:
-            output_dir = "responses"
-            os.makedirs(output_dir, exist_ok=True)
-            
-            # Save participant summary CSV
-            summary_df = pd.DataFrame([participant_summary])
-            summary_file = os.path.join(output_dir, f"{st.session_state.participant_id}_summary.csv")
-            summary_df.to_csv(summary_file, index=False)
-            
-            # Save detailed responses CSV
-            detailed_df = pd.DataFrame(detailed_responses)
-            detailed_file = os.path.join(output_dir, f"{st.session_state.participant_id}_detailed.csv")
-            detailed_df.to_csv(detailed_file, index=False)
-            
-            # Save category assessments CSV (if exists)
-            category_file = None
-            if hasattr(st.session_state, 'category_assessments') and st.session_state.category_assessments:
-                category_df = pd.DataFrame(st.session_state.category_assessments)
-                category_file = os.path.join(output_dir, f"{st.session_state.participant_id}_category_assessments.csv")
-                category_df.to_csv(category_file, index=False)
-            
-            # ALSO save legacy format for compatibility
-            legacy_success, legacy_main, legacy_category, legacy_summary = save_final_complete_csv(final_data)
-            
-            csv_files = {
-                'summary': summary_file,
-                'detailed': detailed_file,
-                'category': category_file,
-                'legacy_main': legacy_main
-            }
-            csv_success = True
-            
-        except Exception as e:
-            st.error(f"❌ CSV save failed: {e}")
-            
-        # Step 5: Send email backup
-        with progress_placeholder:
-            show_progress_bar(7, 5, "Creating email backup")
-        
-        email_backup_success = False
-        email_message = ""
-        
-        try:
-            with st.spinner("Sending CSV backup via email..."):
-                email_success, email_msg = send_csv_backup_email(st.session_state.participant_id)
-                email_backup_success = email_success
-                email_message = email_msg
-        except Exception as e:
-            email_message = f"Email backup failed: {e}"
-        
-        # Step 6: Send completion notification
-        with progress_placeholder:
-            show_progress_bar(7, 6, "Sending completion notification")
-        
-        notification_success = False
-        try:
+            email_success, email_msg = send_csv_backup_email(st.session_state.participant_id)
             notification_success, notification_msg = send_completion_notification_email(
                 st.session_state.participant_id, final_data
             )
         except Exception as e:
-            notification_msg = f"Notification failed: {e}"
-        
-        # Step 7: Save to Google Sheets (BATCH OPTIMIZED with PROPER HEADERS)
-        with progress_placeholder:
-            show_progress_bar(7, 7, "Finalizing submission")
-        
-        # Save enhanced sheets structure using batch operations
-        enhanced_sheets_success = False
-        try:
-            # Save participant summary (1 API call)
-            summary_success = save_participant_summary_to_sheets_batch(final_data)
-            
-            # Save detailed responses in batch (1 API call instead of 24!)
-            detailed_success = save_detailed_responses_to_sheets_batch()
-            
-            enhanced_sheets_success = (summary_success and detailed_success)
-            
-            if enhanced_sheets_success:
-                st.success("✅ Enhanced sheets saved with proper headers!")
-            else:
-                st.warning("⚠️ Some enhanced sheets operations failed")
-            
-        except Exception as e:
-            st.error(f"❌ Enhanced Google Sheets save failed: {e}")
-        
-        # Save category assessments (batch optimized with headers)
-        category_sheets_success = False
-        try:
-            category_sheets_success = save_category_assessments_to_sheets()
-            if category_sheets_success:
-                st.success("✅ Category assessments saved with headers!")
-        except Exception as e:
-            st.error(f"❌ Category assessments save failed: {e}")
-        
-        # Determine overall success
-        sheets_success = enhanced_sheets_success and category_sheets_success
+            # Email not critical for study completion
+            email_success = False
+            email_msg = f"Email backup failed: {e}"
         
         # Clear processing indicators
         status_placeholder.empty()
         progress_placeholder.empty()
 
-        # Show user-friendly completion
-        if csv_success or sheets_success or email_backup_success:
+        # Show completion status
+        sheets_success = summary_success and detailed_success and category_success and main_success
+        
+        if sheets_success:
             st.balloons()
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 2rem; border-radius: 12px; text-align: center; margin: 2rem 0;">
-                <h1>🎉 Thank You!</h1>
-                <h3>Your responses have been successfully submitted!</h3>
-                <p style="font-size: 1.1em; margin-top: 1rem;">Your contribution to AI research is greatly appreciated.</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.success("🎉 **All data saved successfully!**")
             
             st.markdown(f"""
             ## ✅ **Study Completed Successfully**
             
             **What you accomplished:**
             - Evaluated **{len(st.session_state.responses)} fashion images**
-            - Provided **{len(st.session_state.responses) * 3}** caption comparisons
+            - Provided **{len(st.session_state.responses) * 3}** caption comparisons  
             - Shared valuable insights about AI-generated descriptions
             
-            **Your participant ID:** `{st.session_state.participant_id}`
-            
-            **What happens next:**
-            - Your responses are securely stored for research analysis
-            - Data will contribute to improving AI systems for fashion e-commerce
-            - Results may be published in academic conferences (anonymously)
-            
+            **Your participant ID:** `{st.session_state.participant_id}`  
             **Thank you for advancing AI research!** 🙏
             """)
+            
+            # Optional email status
+            if email_success:
+                st.info("📧 Backup email sent to researcher")
         else:
-            st.error("❌ **Submission Error**")
-            st.markdown(f"""
-            We encountered a technical issue while saving your responses.
-            
-            **Don't worry - your time wasn't wasted!**
-            
-            Please contact the researcher:
-            - **Participant ID:** `{st.session_state.participant_id}`
-            - **Contact:** akash.kumar@dfki.de
-            """)
-
-        # Optional: Technical details for admin (hidden by default)
-        # if st.checkbox("🔧 Show Technical Details (Admin Only)", value=False):
-        #     col1, col2, col3 = st.columns(3)
-            
-        #     with col1:
-        #         st.markdown("**CSV Files**")
-        #         if csv_success:
-        #             st.success("✅ CSV saved")
-        #             for file_type, file_path in csv_files.items():
-        #                 if file_path:
-        #                     st.text(f"📄 {file_type}: {os.path.basename(file_path)}")
-        #         else:
-        #             st.error("❌ CSV failed")
-            
-            # with col2:
-            #     st.markdown("**Google Sheets**")
-            #     if sheets_success:
-            #         st.success("✅ Sheets uploaded")
-            #         st.text("📊 ParticipantSummary")
-            #         st.text("📊 DetailedResponses")
-            #         st.text("📊 CategoryAssessments")
-            #     else:
-            #         st.error("❌ Sheets failed")
-            
-            # with col3:
-            #     st.markdown("**Email Backup**")
-            #     if email_backup_success:
-            #         st.success("✅ Email sent")
-            #         st.text("📨 ZIP with all CSV files")
-            #     else:
-            #         st.error("❌ Email failed")
-            #         st.text(email_message)
+            st.error("❌ Some data saving failed - please contact researcher")
+            st.info(f"**Participant ID:** {st.session_state.participant_id}")
+            st.info("**Contact:** akash.kumar@dfki.de")
         
         st.session_state.study_complete = True
         st.session_state.processing_completion = False
         
     except Exception as e:
-        # ← THIS WAS THE MISSING EXCEPT BLOCK!
         st.session_state.processing_completion = False
-        st.error("❌ **Critical Error**")
+        st.error(f"❌ **Critical Error:** {str(e)}")
         st.error(f"Please contact the researcher: akash.kumar@dfki.de")
         st.info(f"**Participant ID:** {st.session_state.participant_id}")
-        st.info(f"**Error details:** {str(e)}")
 
 def show_transition_message(message="Loading next image..."):
+    """Show transition message - KEEPING EXISTING SYSTEM"""
     # Check if this is a category transition
     banner_value = st.session_state.get("show_transition_banner", "")
     if isinstance(banner_value, str) and banner_value.startswith("category_transition_"):
@@ -2005,10 +1828,11 @@ def show_transition_message(message="Loading next image..."):
         time.sleep(0.5)
         st.session_state.show_transition_banner = False
         st.rerun()
-        
+
 # ======================== MAIN APP LOGIC ========================
 
 def main():
+    """Main application logic - KEEPING EXISTING FLOW"""
     
     st.markdown("""
     <style>
