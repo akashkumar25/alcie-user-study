@@ -852,7 +852,7 @@ def show_welcome_page():
         ### 📞 Contact & Institution
         
         **Researcher:** Akash Kumar (akash.kumar@dfki.de)  
-        **Supervisor:** Aliki Anagnostopoulou (aliki.anagnostopoulou@dfki.de)  
+        **Supervisor:** Aliki Anagnostopoulou  
         **Institution:** DFKI - German Research Center for Artificial Intelligence  
         **Website:** www.dfki.de
         
