@@ -28,26 +28,154 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 def get_gsheet_connection():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        st.secrets["alcie-463022-f43b711b72bc"], scope
-    )
-    client = gspread.authorize(creds)
-    return client
+    """Get Google Sheets connection with proper error handling"""
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        
+        # Use the correct secret key that matches your secrets.toml
+        # Based on your code, it should be "gcp_service_account"
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(
+            st.secrets["gcp_service_account"], scope
+        )
+        client = gspread.authorize(creds)
+        return client
+    except KeyError as e:
+        st.error(f"❌ Missing credentials in secrets: {e}")
+        return None
+    except Exception as e:
+        st.error(f"❌ Failed to connect to Google Sheets: {e}")
+        return None
 
 def save_response_to_sheet(row_data, worksheet_name="MainResponses"):
+    """Save single row to Google Sheets"""
     try:
-        # Authorize using credentials from secrets.toml
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["alcie-463022-f43b711b72bc"], scope)
-        client = gspread.authorize(creds)
-
-        sheet = client.open("ALCIE User Study Responses")  # Change if needed
-        worksheet = sheet.worksheet(worksheet_name)
-
-        worksheet.append_row(row_data)
+        client = get_gsheet_connection()
+        if not client:
+            return False
+            
+        # Try to open existing spreadsheet, create if doesn't exist
+        try:
+            sheet = client.open("ALCIE User Study Responses")
+        except gspread.SpreadsheetNotFound:
+            sheet = client.create("ALCIE User Study Responses")
+            # Share with your email (replace with actual email)
+            sheet.share('akashkumar97251@gmail.com', perm_type='user', role='writer')
+        
+        # Get or create worksheet
+        try:
+            worksheet = sheet.worksheet(worksheet_name)
+        except gspread.WorksheetNotFound:
+            worksheet = sheet.add_worksheet(title=worksheet_name, rows=1000, cols=50)
+            
+            # Add headers for the new worksheet
+            if worksheet_name == "MainResponses":
+                headers = [
+                    'participant_id', 'fashion_interest', 'sample_number', 'image_id', 
+                    'category', 'introduced_phase', 'cf_risk', 'best_caption_method', 
+                    'comment', 'timestamp', 'response_type', 'age_group', 'gender',
+                    'quality_patterns_noticed', 'better_categories', 'worse_categories',
+                    'learning_hypothesis', 'better_learned_categories', 'accessories_rank',
+                    'bottoms_rank', 'dresses_rank', 'outerwear_rank', 'shoes_rank', 
+                    'tops_rank', 'caption_preference', 'summary_assessment_rating',
+                    'forgetting_evidence', 'final_feedback', 'completion_timestamp'
+                ]
+            elif worksheet_name == "CategoryAssessments":
+                headers = [
+                    'participant_id', 'response_type', 'previous_category', 'current_category',
+                    'sample_idx_at_transition', 'quality_rating', 'quality_drop',
+                    'consistency_rating', 'expectations_rating', 'comments', 'timestamp'
+                ]
+            else:
+                headers = []
+            
+            if headers:
+                worksheet.insert_row(headers, 1)
+        
+        # Convert row_data to list of strings
+        if isinstance(row_data, (list, tuple)):
+            string_row = [str(item) for item in row_data]
+        else:
+            string_row = [str(row_data)]
+            
+        worksheet.append_row(string_row)
+        return True
+        
     except Exception as e:
         st.warning(f"❗ Could not save to Google Sheet ({worksheet_name}): {e}")
+        return False
+
+def save_category_assessments_to_sheets():
+    """Save all category assessments to Google Sheets"""
+    if not hasattr(st.session_state, 'category_assessments') or not st.session_state.category_assessments:
+        return True
+    
+    try:
+        success_count = 0
+        for assessment in st.session_state.category_assessments:
+            # Convert assessment dict to list in correct order
+            row_data = [
+                assessment['participant_id'],
+                assessment['response_type'],
+                assessment['previous_category'],
+                assessment['current_category'],
+                assessment['sample_idx_at_transition'],
+                assessment['quality_rating'],
+                assessment['quality_drop'],
+                assessment['consistency_rating'],
+                assessment['expectations_rating'],
+                assessment['comments'],
+                assessment['timestamp']
+            ]
+            
+            if save_response_to_sheet(row_data, worksheet_name="CategoryAssessments"):
+                success_count += 1
+        
+        st.info(f"✅ Saved {success_count}/{len(st.session_state.category_assessments)} category assessments to Google Sheets")
+        return success_count > 0
+        
+    except Exception as e:
+        st.error(f"❌ Error saving category assessments: {e}")
+        return False
+
+def save_main_responses_to_sheets(df):
+    """Save main responses to Google Sheets (one row per participant)"""
+    try:
+        # Get first row (all rows have same participant data due to duplication in complete_study)
+        first_row = df.iloc[0]
+        
+        # Create row data with all the flattened information
+        row_data = [
+            first_row.get('participant_id', ''),
+            first_row.get('fashion_interest', ''),
+            len(st.session_state.responses),  # total samples
+            ', '.join([str(r['image_id']) for r in st.session_state.responses]),  # all image IDs
+            ', '.join([str(r['category']) for r in st.session_state.responses]),  # all categories
+            first_row.get('response_type', ''),
+            first_row.get('age_group', ''),
+            first_row.get('gender', ''),
+            first_row.get('quality_patterns_noticed', ''),
+            first_row.get('better_categories', ''),
+            first_row.get('worse_categories', ''),
+            first_row.get('learning_hypothesis', ''),
+            first_row.get('better_learned_categories', ''),
+            first_row.get('accessories_rank', ''),
+            first_row.get('bottoms_rank', ''),
+            first_row.get('dresses_rank', ''),
+            first_row.get('outerwear_rank', ''),
+            first_row.get('shoes_rank', ''),
+            first_row.get('tops_rank', ''),
+            first_row.get('caption_preference', ''),
+            first_row.get('summary_assessment_rating', ''),
+            first_row.get('forgetting_evidence', ''),
+            first_row.get('final_feedback', ''),
+            first_row.get('completion_timestamp', '')
+        ]
+        
+        return save_response_to_sheet(row_data, worksheet_name="MainResponses")
+        
+    except Exception as e:
+        st.error(f"❌ Error saving main responses: {e}")
+        return False
     
 st.markdown("""
 <style>
@@ -999,30 +1127,34 @@ def complete_study(age, gender, quality_patterns, better_categories, worse_categ
             if col != 'participant_id':
                 df[col] = value
         
-        # NEW: Save category assessments separately
-        if hasattr(st.session_state, 'category_assessments') and st.session_state.category_assessments:
-            category_df = pd.DataFrame(st.session_state.category_assessments)
-            category_filename = f"category_assessments_{st.session_state.participant_id}.csv"
-            category_df.to_csv(category_filename, index=False)
-            
-            # Save to responses directory
-            output_dir = "responses"
-            os.makedirs(output_dir, exist_ok=True)
-            category_output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_category_assessments.csv")
-            category_df.to_csv(category_output_file, index=False)
-            # Send each category to "CategoryAssessments" tab
-            for _, row in category_df.iterrows():
-                save_response_to_sheet(row.tolist(), worksheet_name="CategoryAssessments")
-        
-
-        # Save to 'responses/' directory
+        # Save to CSV as backup
         output_dir = "responses"
         os.makedirs(output_dir, exist_ok=True)
         output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_responses.csv")
         df.to_csv(output_file, index=False)
-        save_response_to_sheet(df.iloc[0].tolist(), worksheet_name="MainResponses")
-
-        st.success("✅ Your responses have been saved securely. Thank you for your time!")
+        
+        # Save category assessments to CSV
+        if hasattr(st.session_state, 'category_assessments') and st.session_state.category_assessments:
+            category_df = pd.DataFrame(st.session_state.category_assessments)
+            category_output_file = os.path.join(output_dir, f"{st.session_state.participant_id}_category_assessments.csv")
+            category_df.to_csv(category_output_file, index=False)
+        
+        # Save to Google Sheets
+        sheets_success = True
+        
+        # Save main responses
+        if not save_main_responses_to_sheets(df):
+            sheets_success = False
+            
+        # Save category assessments
+        if not save_category_assessments_to_sheets():
+            sheets_success = False
+        
+        # Show success message
+        if sheets_success:
+            st.success("✅ Your responses have been saved to both Google Sheets and CSV backup!")
+        else:
+            st.warning("⚠️ Responses saved to CSV backup. Google Sheets sync had issues.")
         
         # Success message
         category_assessments_count = len(st.session_state.get('category_assessments', []))
