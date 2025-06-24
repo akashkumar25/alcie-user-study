@@ -1130,6 +1130,11 @@ def show_completion_page():
         height=120
     )
     
+    if isinstance(better_categories, list):
+        better_categories = ", ".join(better_categories)
+    if isinstance(worse_categories, list):  
+        worse_categories = ", ".join(worse_categories)
+    
     # Submit button with processing
     if st.session_state.get('processing_completion', False):
         st.button("🔄 Processing... Please wait", disabled=True, type="primary", use_container_width=True)
@@ -1145,7 +1150,7 @@ def show_completion_page():
 
 def complete_study_with_processing(age, gender, quality_patterns, better_categories, worse_categories,
                                  learning_hypothesis, summary_assessment, better_learned, final_feedback):
-    """Complete study with processing indicators"""
+    """Complete study with processing indicators - FIXED VERSION"""
     
     st.session_state.processing_completion = True
     
@@ -1156,24 +1161,33 @@ def complete_study_with_processing(age, gender, quality_patterns, better_categor
         with status_placeholder:
             st.info("🔄 **Processing your submission...** Please don't close this window.")
         
-        # Prepare final data
+        # Prepare final data with FIXED list handling
         with progress_placeholder:
             st.progress(1/3, text="Step 1/3: Preparing final data")
+        
+        # FIXED: Ensure lists are properly converted to strings
+        better_cats_str = ", ".join(better_categories) if better_categories else ""
+        worse_cats_str = ", ".join(worse_categories) if worse_categories else ""
+        better_learned_str = ", ".join(better_learned) if better_learned else ""
         
         final_data = {
             'participant_id': st.session_state.participant_id,
             'response_type': 'final_questionnaire',
-            'age_group': age,
-            'gender': gender,
+            'age_group': age if age else "",  # Handle None values
+            'gender': gender if gender else "",  # Handle None values
             'quality_patterns_noticed': quality_patterns,
-            'better_categories': ", ".join(better_categories) if better_categories else "",
-            'worse_categories': ", ".join(worse_categories) if worse_categories else "",
+            'better_categories': better_cats_str,  # FIXED: String, not list
+            'worse_categories': worse_cats_str,    # FIXED: String, not list
             'learning_hypothesis': learning_hypothesis,
-            'better_learned_categories': better_learned,
+            'better_learned_categories': better_learned_str,  # FIXED: String, not list
             'summary_assessment_rating': summary_assessment,
-            'final_feedback': final_feedback,
+            'final_feedback': final_feedback if final_feedback else "",
             'completion_timestamp': datetime.now().isoformat()
         }
+        
+        # Debug: Show what we're trying to save
+        # if st.session_state.get('debug_mode', False):
+        #     st.write("Debug - Final data:", final_data)
         
         # Save to Google Sheets
         with progress_placeholder:
@@ -1209,7 +1223,7 @@ def complete_study_with_processing(age, gender, quality_patterns, better_categor
             **Thank you for advancing AI research!** 🙏
             """)
         else:
-            st.error("❌ Some data saving failed - please contact researcher")
+            st.error("❌ Some data saving failed - but CSV backup was created")
             st.info(f"**Participant ID:** {st.session_state.participant_id}")
             st.info("**Contact:** akash.kumar@dfki.de")
         
@@ -1219,7 +1233,17 @@ def complete_study_with_processing(age, gender, quality_patterns, better_categor
     except Exception as e:
         st.session_state.processing_completion = False
         st.error(f"❌ **Critical Error:** {str(e)}")
-        st.error(f"Please contact the researcher: akash.kumar@dfki.de")
+        st.error(f"**Participant ID:** {st.session_state.participant_id}")
+        st.error("Please contact the researcher: akash.kumar@dfki.de")
+        
+        # # Show debug info
+        # if st.session_state.get('debug_mode', False):
+        #     st.write("Debug info:", {
+        #         'better_categories': better_categories,
+        #         'worse_categories': worse_categories,
+        #         'age': age,
+        #         'gender': gender
+        #     })
 
 # ======================== TRANSITION MESSAGE (Unchanged) ========================
 

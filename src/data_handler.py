@@ -322,7 +322,7 @@ def save_detailed_responses_to_sheets():
         return False
 
 def save_participant_summary_to_sheets(final_data):
-    """Save participant summary to Google Sheets"""
+    """Save participant summary to Google Sheets - FIXED VERSION"""
     try:
         client = get_gsheet_connection()
         if not client:
@@ -346,20 +346,30 @@ def save_participant_summary_to_sheets(final_data):
         if not safe_ensure_headers(worksheet, headers):
             return False
         
-        # Single summary row
+        # FIXED: Properly handle multiselect values
+        better_cats = final_data.get('better_categories', '')
+        worse_cats = final_data.get('worse_categories', '')
+        
+        # Ensure these are strings, not lists
+        if isinstance(better_cats, list):
+            better_cats = ", ".join(better_cats)
+        if isinstance(worse_cats, list):
+            worse_cats = ", ".join(worse_cats)
+        
+        # Single summary row with proper string conversion
         row = [
-            st.session_state.participant_id,
-            st.session_state.fashion_interest,
-            final_data.get('age_group', ''),
-            final_data.get('gender', ''),
-            len(st.session_state.responses),
-            final_data.get('completion_timestamp', ''),
-            final_data.get('quality_patterns_noticed', ''),
-            final_data.get('better_categories', ''),
-            final_data.get('worse_categories', ''),
-            final_data.get('learning_hypothesis', ''),
-            final_data.get('summary_assessment_rating', ''),
-            final_data.get('final_feedback', '')
+            str(st.session_state.participant_id),
+            str(st.session_state.fashion_interest),
+            str(final_data.get('age_group', '')),
+            str(final_data.get('gender', '')),
+            str(len(st.session_state.responses)),
+            str(final_data.get('completion_timestamp', '')),
+            str(final_data.get('quality_patterns_noticed', '')),
+            str(better_cats),  # FIXED: Ensure string
+            str(worse_cats),   # FIXED: Ensure string  
+            str(final_data.get('learning_hypothesis', '')),
+            str(final_data.get('summary_assessment_rating', '')),
+            str(final_data.get('final_feedback', ''))
         ]
         
         worksheet.append_row(row)
