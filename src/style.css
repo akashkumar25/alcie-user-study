@@ -397,9 +397,11 @@ div[data-testid="radio"] > div > label[data-checked="true"] {
     border-color: #2563EB !important;
 }
 
-/* Force white radio and checkbox controls everywhere */
-input[type="radio"], input[type="checkbox"] {
-    accent-color: #fff !important;
-    background: #fff !important;
-    border-color: #fff !important;
+/* Force selectbox dropdown option text to dark, overriding global white */
+div[data-baseweb="option"],
+div[data-baseweb="option"] *,
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] * {
+    color: #111827 !important;
+    background-color: #F3F4F6 !important;
 }

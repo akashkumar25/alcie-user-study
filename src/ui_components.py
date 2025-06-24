@@ -189,7 +189,7 @@ def show_dfki_consent_page():
         "• I understand my participation is voluntary and I may withdraw anytime\n\n"
         "• I understand how my data will be anonymized and used for research\n\n"
         "• I consent to publication of anonymized results in scientific journals",
-        help="Required: Please confirm that you understand and agree to participate in this research",
+        help="Required: Please confirm that you understand and agree to participate",
         key="participant_consent"
     )
     
@@ -1129,14 +1129,24 @@ def show_completion_page():
     """, unsafe_allow_html=True)
     
     # Demographics (keep simple)
-    st.markdown("### 👤 Demographics")
+    st.markdown("###  Demographics")
     col1, col2 = st.columns(2)
     
     with col1:
-        age = st.selectbox("Age group:", ["", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"])
+        age = st.radio(
+            "Age group:",
+            ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"],
+            index=None,
+            horizontal=True,
+        )
     
     with col2:
-        gender = st.selectbox("Gender:", ["", "Female", "Male", "Non-binary/Third gender", "Prefer not to disclose"])
+        gender = st.radio(
+            "Gender:",
+            ["Female", "Male", "Non-binary/Third gender", "Prefer not to disclose"],
+            index=None,
+            horizontal=True
+        )
     
     st.markdown("---")
     
@@ -1155,12 +1165,13 @@ def show_completion_page():
         if quality_patterns in ["Yes, clear differences", "Some differences"]:
             better_categories = st.multiselect(
                 "Which categories had better captions?",
-                ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"]
+                ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"],
+                label_visibility="visible"
             )
             
             worse_categories = st.multiselect(
                 "Which categories had worse captions?",
-                ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"]
+         ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"]
             )
         else:
             better_categories = []
@@ -1169,9 +1180,24 @@ def show_completion_page():
     with col2:
         learning_hypothesis = st.radio(
             "Do you think the AI learned some fashion categories better than others?",
-            ["Yes, definitely", "Yes, somewhat", "No", "Not sure"],
+            ["Yes", "Not sure"],
             index=None
         )
+        if learning_hypothesis in ["Yes"]:
+            better_learned = st.multiselect(
+                "Which categories do you think the AI learned best? (Rank your top 6, in order)",
+                ["Accessories", "Bottoms", "Dresses", "Outerwear", "Shoes", "Tops"],
+                help="Select and drag to rank all categories where AI seemed most competent",
+                default=[],
+                max_selections=6
+            )
+            if better_learned:
+                st.markdown(
+                    "**Your ranking:** " +
+                    ", ".join([f"{i+1}. {cat}" for i, cat in enumerate(better_learned)])
+                )
+        else:
+            better_learned = []
         
         summary_assessment = st.radio(
             "How well do you think the AI learned to describe diverse fashion items?",
@@ -1196,11 +1222,11 @@ def show_completion_page():
                 st.error("❌ Please answer all required questions")
             else:
                 complete_study_with_processing(age, gender, quality_patterns, better_categories, 
-                                             worse_categories, learning_hypothesis, summary_assessment, 
+                                             worse_categories, learning_hypothesis, better_learned, summary_assessment, 
                                              final_feedback)
 
 def complete_study_with_processing(age, gender, quality_patterns, better_categories, worse_categories,
-                                 learning_hypothesis, summary_assessment, final_feedback):
+                                 learning_hypothesis, summary_assessment, better_learned, final_feedback):
     """Complete study with processing indicators"""
     
     st.session_state.processing_completion = True
@@ -1225,6 +1251,7 @@ def complete_study_with_processing(age, gender, quality_patterns, better_categor
             'better_categories': ", ".join(better_categories) if better_categories else "",
             'worse_categories': ", ".join(worse_categories) if worse_categories else "",
             'learning_hypothesis': learning_hypothesis,
+            'better_learned_categories': better_learned,
             'summary_assessment_rating': summary_assessment,
             'final_feedback': final_feedback,
             'completion_timestamp': datetime.now().isoformat()
