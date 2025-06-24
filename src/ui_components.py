@@ -15,209 +15,127 @@ from data_handler import save_progress_to_csv, save_all_to_google_sheets, save_f
 # ======================== STEP 1: DFKI CONSENT PAGE (NEW - Sara-Jane's Feedback) ========================
 
 def show_dfki_consent_page():
-    """Show DFKI-compliant consent form - Enhanced with Sara-Jane's requirements"""
-    
+    """Show DFKI-compliant consent form, closely matching the official PDF text."""
+
     st.markdown("""
     <div class="main-header">
-        <h1>🔬 Research Study Consent</h1>
-        <h3>Active Learning for Continual Image Captioning Enhancement</h3>
+        <h1>Informed Consent of Participation</h1>
+        <h3>ALCIE: Active Learning for Continual Image Captioning Enhancement</h3>
         <p style="color: #D1D5DB; margin-top: 0.5rem;">
             German Research Center for Artificial Intelligence (DFKI)
         </p>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Study Purpose
+
     st.markdown("""
-    ### **🎯 Study Purpose**
+    You are invited to participate in the online study <b>ALCIE: Active Learning for Continual Image Explanations</b>, conducted by Akash Kumar and Aliki Anagnostopoulou, supervised by Michael Barz at DFKI.
     
-    This study investigates how artificial intelligence systems learn to describe fashion items 
-    and whether they maintain quality when learning new categories over time.
+    <br>
+    <b>Please note:</b>\n\n
     
-    **Your role:** Evaluate AI-generated fashion captions and provide feedback on their quality.
-    """)
+    - Participation is entirely voluntary and you may withdraw at any time.\n\n
     
-    # Procedures
-    st.markdown("""
-    ### **📋 What You'll Do**
+    - The study will last approximately 30 minutes.\n\n
     
-    1. **View 24 fashion images** across 6 categories
-    2. **Rate AI-generated captions** on 4 criteria  
-    3. **Complete brief questionnaires** about your experience
-    4. **Duration:** 15-20 minutes
-    """)
+    - We will record personal demographics (age group, gender).\n\n
     
-    # Data Collection & Privacy
-    col1, col2 = st.columns(2)
+    - All records and data will be subject to standard data use policies.\n\n
     
-    with col1:
-        st.markdown("""
-        ### **📊 Data Collected**
-        
-        **What we collect:**
-        - Fashion interest level (required)
-        - Age group (required)
-        - Gender (required)
-        - Rating scores (1-5 scales)
-        - Caption preferences 
-        - Optional written feedback
-        
-        **What we DON'T collect:**
-        - Name, email, or personal details
-        - IP addresses or location data
-        - Any identifying information
-        """)
+    - Repeated participation in the study is not permitted.\n\n
     
-    with col2:
-        st.markdown("""
-        ### **🛡️ Privacy Protection**
-        
-        - **Complete anonymity** - randomly generated participant IDs only
-        - **Secure data storage** - research-grade protection standards
-        - **Academic use only** - results published in scientific papers
-        - **Your rights** - can withdraw consent for future publications
-        """)
-    
-    # Enhanced sections (Sara-Jane's requirements)
-    col1, col2 = st.columns(2)
+    If you have questions or complaints about the consent process or your rights as a participant, please contact Michael Barz (michael.barz@dfki.de).
+    """, unsafe_allow_html=True)
 
-    with col1:
-        st.markdown("""
-        ### **🔒 How Anonymity is Ensured**
-        
-        **Anonymization Process:**
-        - No personal data collected (no names, emails, IP addresses)
-        - Random participant IDs generated (e.g., P1234567890123)  
-        - Data stored separately from any identifying information
-        - No way to link responses back to individual participants
-        
-        **Data Storage:**
-        - Secure DFKI servers in Germany
-        - Encrypted storage with researcher-only access
-        - Regular security audits and backups
-        """)
-
-    with col2:
-        st.markdown("""
-        ### **📅 Data Retention & Rights**
-        
-        **Retention Period:**
-        - Anonymized data retained for **5 years** for research validation
-        - Raw data permanently deleted after anonymization
-        - Participants may request deletion before anonymization
-        
-        **Your Rights (GDPR):**
-        - Withdraw consent anytime: akash.kumar@dfki.de
-        - Request data deletion before publication
-        - File complaints with data protection authority
-        """)
-
-    # Legal compliance details
-    st.markdown("""
-    ### **⚖️ Legal Basis & Compliance**
-
-    **GDPR Compliance:**
-    - **Legal basis:** Consent for research purposes (Article 6.1.a)
-    - **Data controller:** Deutsches Forschungszentrum für Künstliche Intelligenz GmbH
-    - **Address:** Trippstadter Straße 122, 67663 Kaiserslautern, Germany
-    - **Data Protection Officer:** datenschutz@dfki.de
-    - **Supervisory Authority:** LfDI Baden-Württemberg
-
-    **Study Information:**
-    - **Study Reference:** ALCIE-CL-2025 (DFKI Internal)
-    - **Ethics Review:** Approved by DFKI Internal Review Process  
-    - **Duration:** Data collection January-March 2025
+    st.markdown("### 1. Purpose and Goal of this Research")
+    st.write("""
+    The purpose of this study is to perform human validation of continual learning methods for a fashion caption dataset.
+    The main goal is to compare how different active learning strategies influence the quality of an episodic memory for caption generation.
+    Your participation will help us achieve this goal. The results may be presented at professional meetings or published in scientific journals.
     """)
 
-    # Enhanced contact information
-    st.markdown("""
-    ### **📞 Complete Contact Information**
-
-    **Research Team:**
-    - **Principal Investigator:** Akash Kumar, M.Sc. (akash.kumar@dfki.de)
-    - **Academic Supervisor:** Aliki Anagnostopoulou (aliki.anagnostopoulou@dfki.de)
-
-    **Institution:**
-    - **Organization:** DFKI - German Research Center for Artificial Intelligence
-    - **Address:** Trippstadter Straße 122, 67663 Kaiserslautern, Germany  
-    - **Phone:** +49 631 205-3511
-    - **Website:** www.dfki.de
-
-    **Data Protection:**
-    - **DFKI Data Protection Officer:** datenschutz@dfki.de
-    - **External Authority:** LfDI Baden-Württemberg
+    st.markdown("### 2. Participation and Compensation")
+    st.write("""
+    Your participation is voluntary. About 15 people will be surveyed. There is no compensation for participation.
+    You may withdraw at any time without penalty. If you decline or withdraw, no one outside the study team will be notified.
+    You can still request a certificate of participation if needed.
     """)
 
-    # Scientific publication details
-    st.markdown("""
-    ### **📚 Research Output & Publication**
-
-    **Scientific Publications:**
-    - Results published in peer-reviewed AI/ML conferences (ACL, EMNLP, CVPR)
-    - Potential journal publication in computational linguistics
-    - Only anonymized aggregate data and statistical summaries published
-
-    **Data Sharing:**
-    - Anonymized data may be shared with academic collaborators
-    - Individual responses never published in identifiable form  
-    - Research code and datasets made available for scientific replication
-
-    **Research Impact:**
-    - Advances continual learning in AI systems
-    - Improves fashion e-commerce recommendation systems
-    - Contributes to human-like AI language understanding
-    """)
+    st.markdown("### 3. Procedure")
+    st.write("""
+    After reading and agreeing to this consent form:
     
+    1. You will view and rate AI-generated captions for fashion images.
+    2. You will complete questionnaires about your experience.
+    3. The entire study is conducted online and should take about 30 minutes.
+    """)
+
+    st.markdown("### 4. Risks and Benefits")
+    st.write("""
+    There are no risks associated with this study. Any discomforts or inconveniences will be minor and unlikely.
+    If you feel uncomfortable, you may discontinue at any time. You will not directly benefit from participation,
+    but your input may contribute to advances in research and AI systems.
+    """)
+
+    st.markdown("### 5. Data Protection and Confidentiality")
+    st.write("""
+    Results from this study may be published in scientific articles, but will never include your name or any identifiable information.
+    All demographic data will be published in anonymized, aggregated form. Contact details (if collected) will only be used to send details about the study and will not be shared.
+    
+    Data is stored confidentially and securely, encrypted, and only accessible by the research team. Data is processed in accordance with the General Data Protection Regulation (GDPR) of the EU. Raw data is retained securely and destroyed as soon as not needed.
+    
+    This online study uses cookies and tracking technologies to enable research functionality. Despite care, absolute confidentiality or anonymity cannot be guaranteed.
+    According to GDPR, you may contact the researchers at any time to withdraw consent or request data deletion.
+    If a breach of confidential data is detected, the participant will be informed.
+    """)
+
+    st.markdown("### 6. Identification of Investigators")
+    st.write("""
+    **Student Researchers:**  
+    Akash Kumar, akash.kumar@dfki.de  
+    Aliki Anagnostopoulou, aliki.anagnostopoulou@dfki.de  
+
+    **Principal Investigator:**  
+    Michael Barz, michael.barz@dfki.de  
+    Trippstadter Straße 122, 67663 Kaiserslautern, Germany
+    """)
+
     st.markdown("---")
-    
-    # Required Information
-    st.markdown("### **📝 Required Information**")
-    
-    fashion_interest = st.radio(
-        "How interested are you in fashion? (Required for research context)",
-        ["Very interested", "Somewhat interested", "Moderately interested", 
-         "Slightly interested", "Not particularly interested"],
-        index=None,
-        help="This helps us understand participant background and interpret responses"
-    )
+    st.markdown("### **Consent**")
 
-    # Consent details above checkbox for clarity
+    st.markdown("""
+    <ul>
+        <li>I have read and understood the information above, and I voluntarily consent to participate in this research study conducted by DFKI.</li>
+        <li>I am over 18 years of age and legally able to provide consent.</li>
+        <li>I understand that my participation is voluntary and I may withdraw at any time.</li>
+        <li>I understand how my data will be anonymized and used for research.</li>
+        <li>I consent to the publication of anonymized results in scientific journals.</li>
+    </ul>
+    """, unsafe_allow_html=True)
+
     consent = st.checkbox(
-        "I have read and understood the information above, and I voluntarily consent to participate in this research study conducted by DFKI.\n\n\n\n"
-        "I confirm that:\n\n"
-        "• I am over 18 years of age and legally able to provide consent\n\n"
-        "• I understand my participation is voluntary and I may withdraw anytime\n\n"
-        "• I understand how my data will be anonymized and used for research\n\n"
-        "• I consent to publication of anonymized results in scientific journals",
-        help="Required: Please confirm that you understand and agree to participate",
+        "I agree to all of the above statements.",
+        help="Required: Please confirm your understanding and agreement to participate.",
         key="participant_consent"
     )
-    
-    # Success message when consent is given
+
     if consent:
         st.markdown("""
-        <div style="background: rgba(5, 150, 105, 0.1); border: 1px solid #10B981; 
-                    border-radius: 8px; padding: 1rem; margin: 1rem 0; text-align: center;">
+        <div style="background: rgba(5, 150, 105, 0.1); border: 1px solid #10B981; border-radius: 8px; padding: 1rem; margin: 1rem 0; text-align: center;">
             <p style="margin: 0; color: #A7F3D0; font-weight: 600;">
-                ✅ <strong>Consent Recorded:</strong> Your agreement has been noted. You may proceed to the study instructions.
+                ✅ <strong>Consent Recorded:</strong> Thank you. You may proceed to the study instructions.
             </p>
         </div>
         """, unsafe_allow_html=True)
-    
+
     if st.button("Continue to Study Instructions", type="primary", use_container_width=True):
         if not consent:
             st.error("❌ Please provide your consent to participate")
-        elif not fashion_interest:
-            st.error("❌ Please indicate your fashion interest level")
         else:
-            # Store data
             st.session_state.consent_given = True
-            st.session_state.fashion_interest = fashion_interest
             st.session_state.show_instructions = True
-                        
-            # USE WORKING TRANSITION SYSTEM FROM OLD CODE
             st.session_state.show_transition_banner = True
             st.rerun()
+
 
 
 # ======================== STEP 2: TASK INSTRUCTIONS (NEW - Separated) ========================
