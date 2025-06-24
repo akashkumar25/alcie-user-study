@@ -229,11 +229,6 @@ div[data-testid="radio"] > div > label[data-checked="true"] {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3), 0 4px 12px rgba(37, 99, 235, 0.4) !important;
 }
 
-/* Hide radio button circles for horizontal layout */
-div[data-testid="radio"] input[type="radio"] {
-    display: none !important;
-}
-
 /* ======================== TEXT INPUTS & AREAS ======================== */
 .stTextArea > div > div > textarea,
 .stTextInput > div > div > input,
@@ -402,3 +397,9 @@ div[data-testid="radio"] input[type="radio"] {
     border-color: #2563EB !important;
 }
 
+/* Force white radio and checkbox controls everywhere */
+input[type="radio"], input[type="checkbox"] {
+    accent-color: #fff !important;
+    background: #fff !important;
+    border-color: #fff !important;
+}
