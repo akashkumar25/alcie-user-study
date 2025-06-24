@@ -1,0 +1,404 @@
+/* styles.css - ALCIE Study Clean Styles */
+
+/* ======================== ROOT VARIABLES ======================== */
+:root {
+    --primary-color: #2563EB;
+    --primary-dark: #1D4ED8;
+    --success-color: #059669;
+    --text-primary: #FFFFFF;
+    --text-secondary: #D1D5DB;
+    --bg-primary: #1F2937;
+    --bg-secondary: #374151;
+    --border-color: #6B7280;
+    --border-focus: #3B82F6;
+    --radius: 8px;
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* ======================== STREAMLIT APP BASE ======================== */
+.stApp {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+body, p, li, span, div, label, h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary) !important;
+}
+
+/* Hide Streamlit Branding */
+#MainMenu, footer, header, .stDeployButton {
+    visibility: hidden !important;
+}
+
+/* ======================== HEADERS ======================== */
+.main-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white !important;
+    text-align: center;
+    padding: 2rem;
+    margin: -1rem -1rem 2rem -1rem;
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.main-header h1, .main-header h3 {
+    color: white !important;
+    margin: 0;
+}
+
+/* ======================== CARDS & CONTAINERS ======================== */
+.info-card, .caption-box, .progress-box {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.success-message {
+    background: #064E3B !important;
+    color: #A7F3D0 !important;
+    border: 1px solid var(--success-color) !important;
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.category-badge {
+    background: var(--primary-color);
+    color: white !important;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+/* ======================== BUTTONS ======================== */
+.stButton > button {
+    background: var(--primary-color) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: var(--radius) !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1.5rem !important;
+    transition: all 0.2s ease !important;
+    box-shadow: var(--shadow) !important;
+}
+
+.stButton > button:hover:not(:disabled) {
+    background: var(--primary-dark) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+}
+
+.stButton > button:disabled {
+    background: #6B7280 !important;
+    color: #9CA3AF !important;
+    cursor: not-allowed !important;
+}
+
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    padding: 1rem 2rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.4) !important;
+}
+
+.stButton > button[kind="primary"]:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1D4ED8, #1E40AF) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px -4px rgba(37, 99, 235, 0.5) !important;
+}
+
+/* ======================== VERTICAL RADIO BUTTONS (Default) ======================== */
+.stRadio > div {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius) !important;
+    padding: 1.2rem !important;
+    box-shadow: var(--shadow) !important;
+}
+
+.stRadio > div > label {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0.6rem 0 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+    font-size: 1rem !important;
+}
+
+.stRadio > div > label:hover {
+    background: rgba(37, 99, 235, 0.1) !important;
+    color: #3B82F6 !important;
+    border-radius: 6px !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+.stRadio > div > label[data-checked="true"] {
+    background: rgba(37, 99, 235, 0.15) !important;
+    color: #2563EB !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    border-left: 3px solid #2563EB !important;
+}
+
+.stRadio input[type="radio"] {
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 1rem !important;
+    margin-left: 0 !important;
+    accent-color: #2563EB !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+}
+
+/* ======================== HORIZONTAL RADIO BUTTONS (Rating Scales) ======================== */
+/* Target only horizontal radio buttons by using stronger selectors */
+div[data-testid="radio"] {
+    width: 100% !important;
+}
+
+div[data-testid="radio"] > div {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 15px !important;
+    background: linear-gradient(135deg, #374151 0%, #4B5563 100%) !important;
+    border: 2px solid #6B7280 !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    margin: 15px 0 !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+div[data-testid="radio"] > div > label {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    min-height: 60px !important;
+    min-width: 120px !important;
+    padding: 15px 10px !important;
+    margin: 0 !important;
+    background: rgba(55, 65, 81, 0.9) !important;
+    border: 2px solid #6B7280 !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: #F3F4F6 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    white-space: nowrap !important;
+}
+
+div[data-testid="radio"] > div > label:hover {
+    background: rgba(37, 99, 235, 0.3) !important;
+    border-color: #3B82F6 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
+div[data-testid="radio"] > div > label[data-checked="true"] {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8) !important;
+    border-color: #2563EB !important;
+    color: white !important;
+    font-weight: 600 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3), 0 4px 12px rgba(37, 99, 235, 0.4) !important;
+}
+
+/* Hide radio button circles for horizontal layout */
+div[data-testid="radio"] input[type="radio"] {
+    display: none !important;
+}
+
+/* ======================== TEXT INPUTS & AREAS ======================== */
+.stTextArea > div > div > textarea,
+.stTextInput > div > div > input,
+.stSelectbox > div > div > input {
+    background: var(--bg-secondary) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: var(--radius) !important;
+    color: var(--text-primary) !important;
+    padding: 0.75rem !important;
+}
+
+.stTextArea > div > div > textarea:focus,
+.stTextInput > div > div > input:focus,
+.stSelectbox > div > div:focus-within {
+    border-color: var(--border-focus) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    outline: none !important;
+}
+
+/* Placeholder text styling */
+.stTextArea > div > div > textarea::placeholder,
+.stTextInput > div > div > input::placeholder,
+.stSelectbox > div > div > input::placeholder {
+    color: #9CA3AF !important;
+    font-style: italic !important;
+    opacity: 1 !important;
+}
+
+.stTextArea > div > div > textarea:focus::placeholder,
+.stTextInput > div > div > input:focus::placeholder {
+    color: #6B7280 !important;
+    opacity: 0.8 !important;
+}
+
+/* ======================== CHECKBOXES ======================== */
+.stCheckbox > label {
+    background: rgba(37, 99, 235, 0.1) !important;
+    border: 2px solid #3B82F6 !important;
+    border-radius: 12px !important;
+    padding: 1.5rem !important;
+    cursor: pointer !important;
+    color: #F3F4F6 !important;
+    transition: all 0.3s ease !important;
+    font-size: 1rem !important;
+    line-height: 1.6 !important;
+}
+
+.stCheckbox > label:hover {
+    border-color: #2563EB !important;
+    background: rgba(37, 99, 235, 0.2) !important;
+}
+
+/* ======================== PROGRESS BARS ======================== */
+.stProgress > div > div {
+    background: var(--bg-secondary) !important;
+    border-radius: 10px !important;
+}
+
+.stProgress [data-testid="stProgress"] > div {
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color)) !important;
+    border-radius: 10px !important;
+}
+
+/* ======================== MESSAGES ======================== */
+.stError {
+    background: #7F1D1D !important;
+    border: 1px solid #DC2626 !important;
+    color: #FCA5A5 !important;
+}
+
+.stWarning {
+    background: #78350F !important;
+    border: 1px solid #D97706 !important;
+    color: #FCD34D !important;
+}
+
+.stSuccess {
+    background: #064E3B !important;
+    border: 1px solid #059669 !important;
+    color: #A7F3D0 !important;
+}
+
+/* ======================== RESPONSIVE DESIGN ======================== */
+@media (max-width: 768px) {
+    div[data-testid="radio"] > div {
+        gap: 12px !important;
+        padding: 15px !important;
+    }
+    
+    div[data-testid="radio"] > div > label {
+        font-size: 12px !important;
+        padding: 12px 8px !important;
+        min-height: 55px !important;
+        min-width: 100px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    div[data-testid="radio"] > div {
+        gap: 8px !important;
+        padding: 12px !important;
+    }
+    
+    div[data-testid="radio"] > div > label {
+        font-size: 11px !important;
+        padding: 10px 6px !important;
+        min-height: 50px !important;
+        min-width: 85px !important;
+    }
+}
+
+/* ======================== ANIMATIONS ======================== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.stButton > button {
+    width: 100% !important;
+    margin: 5px 0 !important;
+    padding: 15px 10px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    min-height: 60px !important;
+}
+
+.stButton > button[kind="secondary"] {
+    background: rgba(55, 65, 81, 0.9) !important;
+    border: 2px solid #6B7280 !important;
+    color: #F3F4F6 !important;
+}
+
+.stButton > button[kind="secondary"]:hover {
+    background: rgba(37, 99, 235, 0.3) !important;
+    border-color: #3B82F6 !important;
+    transform: translateY(-2px) !important;
+}
+
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8) !important;
+    border: 2px solid #2563EB !important;
+    color: white !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3) !important;
+}
+.success-message.caption-transition {
+    background: #065F46 !important;
+    border-color: #059669 !important;
+}
+
+.success-message.image-transition {
+    background: #1E40AF !important;
+    border-color: #2563EB !important;
+}
+
